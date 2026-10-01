@@ -56,8 +56,13 @@ class TableBlackjackTest {
 				table.stand(turn);
 			}
 		}
-		for (int i = 0; i < 200 && table.phase() == TableBlackjack.Phase.DEALER_TURN; i++) {
-			table.tick();
+		int guard = 0;
+		while (table.phase() == TableBlackjack.Phase.DEALER_TURN && guard++ < 40) {
+			if (table.dealerCanHit()) {
+				table.dealerHit(host);
+			} else {
+				table.dealerStand(host);
+			}
 		}
 		assertEquals(TableBlackjack.Phase.RESOLVED, table.phase());
 	}

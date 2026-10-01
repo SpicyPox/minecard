@@ -25,6 +25,7 @@ import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.server.dialog.input.BooleanInput;
 import net.minecraft.server.dialog.input.NumberRangeInput;
 import net.minecraft.server.dialog.input.SingleOptionInput;
+import net.minecraft.server.dialog.input.TextInput;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -93,7 +94,10 @@ public final class CreateRoomDialog {
 			}
 			case "stake_create" -> {
 				CreateRoomDraft draft = CreateRoomDraft.getOrCreate(player.getUUID());
-				applyStake(draft, payload);
+				if (!applyStake(player, draft, payload)) {
+					openStake(player);
+					yield true;
+				}
 				Rooms.createFromDraft(player, draft);
 				yield true;
 			}
@@ -212,14 +216,17 @@ public final class CreateRoomDialog {
 			new PlainMessage(Component.translatable("minecard.create.stake.hint"), CardLayer.DIALOG_WIDTH),
 			new PlainMessage(Component.translatable("minecard.create.stake.check_order"), CardLayer.DIALOG_WIDTH)
 		);
+		// Item = SingleOptionInput (vanilla dropdown/cycle). Amount = TextInput (typed number).
 		List<Input> inputs = List.of(
 			new Input(
 				"bet",
-				new NumberRangeInput(
+				new TextInput(
 					w,
 					Component.translatable("minecard.create.stake.amount"),
-					"options.generic_value",
-					new NumberRangeInput.RangeInfo(1f, 1000f, Optional.of((float) Math.min(1000L, initialBet)), Optional.of(1f))
+					true,
+					Long.toString(initialBet),
+					10,
+					Optional.empty()
 				)
 			),
 			new Input(
@@ -303,8 +310,20 @@ public final class CreateRoomDialog {
 		draft.setRules(new BjRoomRules(turn, decks, insurance, soft17, surrender, seats));
 	}
 
-	private static void applyStake(CreateRoomDraft draft, CompoundTag payload) {
-		long bet = Math.max(1L, Math.round(payload.getFloatOr("bet", draft.betAmount())));
+	/** @return false if amount text is invalid */
+	private static boolean applyStake(ServerPlayer player, CreateRoomDraft draft, CompoundTag payload) {
+		String betText = payload.getStringOr("bet", Long.toString(draft.betAmount())).trim();
+		long bet;
+		try {
+			bet = Long.parseLong(betText.replace(",", "").replace("_", ""));
+		} catch (NumberFormatException e) {
+			player.sendSystemMessage(Component.translatable("minecard.create.stake.amount_invalid"));
+			return false;
+		}
+		if (bet < 1L || bet > 1_000_000L) {
+			player.sendSystemMessage(Component.translatable("minecard.create.stake.amount_invalid"));
+			return false;
+		}
 		draft.setBetAmount(bet);
 		String item = payload.getStringOr("item", draft.stakeItem().toString());
 		Identifier id = Identifier.tryParse(item);
@@ -312,6 +331,7 @@ public final class CreateRoomDialog {
 			id = StakeItem.DEFAULT_ID;
 		}
 		draft.setStakeItem(id);
+		return true;
 	}
 
 	private static boolean readBool(CompoundTag tag, String key, boolean def) {

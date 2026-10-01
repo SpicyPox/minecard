@@ -148,19 +148,60 @@ public final class TableBlackjack {
 	}
 
 	public boolean tickTurnTimer() {
-		if ((phase != Phase.PLAYER_TURN && phase != Phase.INSURANCE) || turnTicksLeft <= 0) {
+		if (phase != Phase.PLAYER_TURN && phase != Phase.INSURANCE && phase != Phase.DEALER_TURN) {
+			return false;
+		}
+		if (turnTicksLeft <= 0) {
 			return false;
 		}
 		turnTicksLeft--;
 		if (turnTicksLeft <= 0) {
 			if (phase == Phase.INSURANCE) {
 				declineInsurance(activePlayerId());
+			} else if (phase == Phase.DEALER_TURN) {
+				if (dealerShouldHit()) {
+					dealerHit(hostId);
+				} else {
+					dealerStand(hostId);
+				}
 			} else {
 				stand(activePlayerId());
 			}
 			return true;
 		}
 		return turnTicksLeft % 20 == 0;
+	}
+
+	public boolean dealerCanHit() {
+		return phase == Phase.DEALER_TURN && dealerShouldHit();
+	}
+
+	public boolean dealerCanStand() {
+		return phase == Phase.DEALER_TURN && !dealerShouldHit();
+	}
+
+	/** Host presses Hit for the house hand — only legal when rules require a hit. */
+	public void dealerHit(UUID actor) {
+		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerShouldHit()) {
+			return;
+		}
+		dealer.add(draw());
+		reveal.idleFullyShown(dealer.size(), true);
+		if (dealer.isBust()) {
+			settle();
+			return;
+		}
+		turnTicksLeft = turnTicks();
+		markDirty();
+	}
+
+	/** Host presses Stand for the house hand — only legal when rules require a stand. */
+	public void dealerStand(UUID actor) {
+		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || dealerShouldHit()) {
+			return;
+		}
+		reveal.idleFullyShown(dealer.size(), true);
+		settle();
 	}
 
 	public void takeInsurance(UUID playerId) {
@@ -445,31 +486,15 @@ public final class TableBlackjack {
 			return;
 		}
 		phase = Phase.DEALER_TURN;
-		reveal.startDealerPlay(Math.min(2, dealer.size()));
+		// Hole card up; host chooses Hit/Stand according to house rules.
+		reveal.idleFullyShown(Math.max(2, dealer.size()), true);
+		turnTicksLeft = turnTicks();
 		markDirty();
 	}
 
 	private boolean tickDealerPlay() {
-		if (reveal.dealerSettlePause()) {
-			reveal.clearDealerSettlePause();
-			reveal.idleFullyShown(dealer.size(), true);
-			settle();
-			return true;
-		}
-		if (reveal.dealerShown() < Math.min(2, dealer.size()) || !reveal.holeFaceUp()) {
-			reveal.startDealerPlay(Math.min(2, dealer.size()));
-			markDirty();
-			return true;
-		}
-		if (dealerShouldHit()) {
-			dealer.add(draw());
-			reveal.showDealerHit();
-			markDirty();
-			return true;
-		}
-		reveal.beginDealerSettlePause();
-		markDirty();
-		return true;
+		// Manual dealer: host presses Hit/Stand. No auto-draw here.
+		return false;
 	}
 
 	private boolean dealerShouldHit() {

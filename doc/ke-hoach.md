@@ -84,10 +84,12 @@ flowchart TD
   lobby --> bets[Ready khóa cược]
   bets --> hand[Ván Blackjack]
   hand --> payout[Trả về ví từng item]
-  payout --> lobby
+  payout --> again[Play again + Confirm]
+  again --> hand
+  payout --> leaveSeat[Rời phòng]
 ```
 
-- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server không ăn phí.
+- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server không ăn phí. Hết ván nhà cái bấm Hit/Stand theo luật; người chơi Play again → Confirm (khóa cược) rồi chủ chia bài tiếp — không đá về sảnh.
 - Trước khi chia, nhà cái phải đủ trả thắng tối đa của các cửa đang cược (Blackjack 3:2), lấy balance trước rồi tới túi. Thiếu thì cửa đó không được nâng cược.
 - Một người chỉ ở một phòng. Mỗi người tối đa một phòng làm chủ.
 - Công khai: broadcast một dòng chat, hover hiện luật và vật phẩm, click vào ghế trống.

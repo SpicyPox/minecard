@@ -2,7 +2,6 @@ package com.spicypox.minecard.room;
 
 import com.spicypox.minecard.game.blackjack.TableBlackjack;
 import com.spicypox.minecard.wallet.EscrowHold;
-import com.spicypox.minecard.wallet.WalletConstants;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -34,6 +33,8 @@ public final class BjRoom {
 	private final List<RoomSeat> seats = new ArrayList<>();
 	private TableBlackjack table;
 	private EscrowHold hostBankroll;
+	/** After a hand resolves, clear consumed escrow once so Play again can lock again. */
+	private boolean postSettleCleared;
 
 	public BjRoom(
 		String roomId,
@@ -132,7 +133,7 @@ public final class BjRoom {
 			return false;
 		}
 		RoomSeat seat = new RoomSeat(playerId, name);
-		seat.setBet(Math.min(maxBet, Math.max(minBet, WalletConstants.DEFAULT_BET)));
+		seat.setBet(minBet);
 		seats.add(seat);
 		return true;
 	}
@@ -154,6 +155,17 @@ public final class BjRoom {
 
 	public void setTable(TableBlackjack table) {
 		this.table = table;
+		// New hand or leave table — allow a fresh post-settle clear next time.
+		this.postSettleCleared = false;
+	}
+
+	/** True after RESOLVED escrow markers were cleared once (play-again locks must stay). */
+	public boolean postSettleCleared() {
+		return postSettleCleared;
+	}
+
+	public void setPostSettleCleared(boolean postSettleCleared) {
+		this.postSettleCleared = postSettleCleared;
 	}
 
 	public EscrowHold hostBankroll() {

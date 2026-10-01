@@ -1,6 +1,7 @@
 package com.spicypox.minecard.room;
 
 import com.spicypox.minecard.Minecard;
+import com.spicypox.minecard.game.blackjack.BlackjackOutcome;
 import com.spicypox.minecard.game.blackjack.TableBlackjack;
 import com.spicypox.minecard.game.blackjack.TablePlayer;
 import com.spicypox.minecard.ui.CardGrid;
@@ -31,7 +32,12 @@ public final class TableBlackjackDialog {
 	public static final Identifier SPLIT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/split");
 	public static final Identifier INSURANCE_YES = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/insurance_yes");
 	public static final Identifier INSURANCE_NO = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/insurance_no");
+	public static final Identifier DEALER_HIT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/dealer_hit");
+	public static final Identifier DEALER_STAND = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/dealer_stand");
+	public static final Identifier PLAY_AGAIN = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/play_again");
+	public static final Identifier DEAL_NEXT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/deal_next");
 	public static final Identifier LEAVE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/leave");
+	public static final Identifier WAIT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/wait");
 
 	private TableBlackjackDialog() {
 	}
@@ -77,26 +83,51 @@ public final class TableBlackjackDialog {
 				body.add(new PlainMessage(label, CardLayer.DIALOG_WIDTH));
 				body.add(new PlainMessage(Component.translatable("minecard.table.hidden_hand"), CardLayer.DIALOG_WIDTH));
 			}
+			if (table.phase() == TableBlackjack.Phase.RESOLVED && tp.seat().outcome() != null) {
+				body.add(new PlainMessage(resultLine(tp), CardLayer.DIALOG_WIDTH));
+			}
+		}
+
+		if (table.phase() == TableBlackjack.Phase.RESOLVED) {
+			int readyCount = (int) room.seats().stream().filter(RoomSeat::ready).count();
+			body.add(new PlainMessage(
+				Component.translatable("minecard.table.next_ready", readyCount, room.seats().size()),
+				CardLayer.DIALOG_WIDTH
+			));
 		}
 
 		int w = DialogUi.BUTTON_WIDTH;
 		List<ActionButton> actions = new ArrayList<>();
-		boolean myIns = !hostView
-			&& table.phase() == TableBlackjack.Phase.INSURANCE
-			&& player.getUUID().equals(table.activePlayerId());
-		boolean myTurn = !hostView
-			&& table.phase() == TableBlackjack.Phase.PLAYER_TURN
-			&& player.getUUID().equals(table.activePlayerId());
-		if (myIns) {
-			actions.add(btn("minecard.bj.insurance_yes", INSURANCE_YES, w));
-			actions.add(btn("minecard.bj.insurance_no", INSURANCE_NO, w));
-		} else if (myTurn) {
-			actions.add(btn("minecard.bj.hit", HIT, w));
-			actions.add(btn("minecard.bj.stand", STAND, w));
-			actions.add(btn("minecard.bj.double", DOUBLE, w));
-			actions.add(btn("minecard.bj.split", SPLIT, w));
+		if (table.phase() == TableBlackjack.Phase.RESOLVED) {
+			fillResolvedActions(actions, player, room, hostView, w);
+		} else if (hostView && table.phase() == TableBlackjack.Phase.DEALER_TURN) {
+			if (table.dealerCanHit()) {
+				actions.add(btn("minecard.bj.hit", DEALER_HIT, w));
+			}
+			if (table.dealerCanStand()) {
+				actions.add(btn("minecard.bj.stand", DEALER_STAND, w));
+			}
+			if (actions.isEmpty()) {
+				actions.add(btn("minecard.bj.wait", WAIT, w));
+			}
 		} else {
-			actions.add(btn("minecard.bj.wait", Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/wait"), w));
+			boolean myIns = !hostView
+				&& table.phase() == TableBlackjack.Phase.INSURANCE
+				&& player.getUUID().equals(table.activePlayerId());
+			boolean myTurn = !hostView
+				&& table.phase() == TableBlackjack.Phase.PLAYER_TURN
+				&& player.getUUID().equals(table.activePlayerId());
+			if (myIns) {
+				actions.add(btn("minecard.bj.insurance_yes", INSURANCE_YES, w));
+				actions.add(btn("minecard.bj.insurance_no", INSURANCE_NO, w));
+			} else if (myTurn) {
+				actions.add(btn("minecard.bj.hit", HIT, w));
+				actions.add(btn("minecard.bj.stand", STAND, w));
+				actions.add(btn("minecard.bj.double", DOUBLE, w));
+				actions.add(btn("minecard.bj.split", SPLIT, w));
+			} else {
+				actions.add(btn("minecard.bj.wait", WAIT, w));
+			}
 		}
 
 		ActionButton leave = new ActionButton(
@@ -114,6 +145,42 @@ public final class TableBlackjackDialog {
 			List.of()
 		);
 		return new MultiActionDialog(data, actions, Optional.of(leave), 1);
+	}
+
+	private static void fillResolvedActions(
+		List<ActionButton> actions,
+		ServerPlayer player,
+		BjRoom room,
+		boolean hostView,
+		int w
+	) {
+		if (hostView) {
+			boolean anyReady = room.seats().stream().anyMatch(RoomSeat::ready);
+			if (anyReady) {
+				actions.add(btn("minecard.table.deal_next", DEAL_NEXT, w));
+			} else {
+				actions.add(btn("minecard.bj.wait", WAIT, w));
+			}
+			return;
+		}
+		boolean alreadyReady = room.seat(player.getUUID()).map(RoomSeat::ready).orElse(false);
+		if (alreadyReady) {
+			actions.add(btn("minecard.bj.wait", WAIT, w));
+		} else {
+			actions.add(btn("minecard.bj.play_again", PLAY_AGAIN, w));
+		}
+	}
+
+	private static Component resultLine(TablePlayer tp) {
+		BlackjackOutcome o = tp.seat().outcome();
+		String key = switch (o) {
+			case PLAYER_BLACKJACK -> "minecard.bj.result.blackjack";
+			case WIN, DEALER_BUST -> "minecard.bj.result.win";
+			case PUSH -> "minecard.bj.result.push";
+			case PLAYER_BUST, LOSE -> "minecard.bj.result.lose";
+			case SURRENDER -> "minecard.bj.result.surrender";
+		};
+		return Component.translatable("minecard.table.result_line", tp.name(), Component.translatable(key));
 	}
 
 	private static ActionButton btn(String key, Identifier id, int w) {

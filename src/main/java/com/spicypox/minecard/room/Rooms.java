@@ -323,32 +323,50 @@ public final class Rooms {
 			if (!room.hostId().equals(host.getUUID()) || room.phase() != BjRoom.Phase.LOBBY) {
 				return;
 			}
-			List<RoomSeat> ready = room.seats().stream().filter(RoomSeat::ready).toList();
-			if (ready.isEmpty()) {
-				host.sendSystemMessage(Component.translatable("minecard.room.need_ready"));
-				return;
-			}
-			long liability = room.maxHouseLiability();
-			if (Wallets.balance(host.getUUID(), room.stakeItem()) < liability) {
-				host.sendSystemMessage(Component.translatable("minecard.room.host_broke", liability));
-				return;
-			}
-			List<TablePlayer> seated = new ArrayList<>();
-			for (RoomSeat seat : ready) {
-				seated.add(new TablePlayer(seat.playerId(), seat.displayName(), seat.bet()));
-			}
-			TableBlackjack table = new TableBlackjack(
-				room.roomId(),
-				room.hostId(),
-				room.stakeItem(),
-				seated,
-				room.rules()
-			);
-			room.setTable(table);
-			room.setPhase(BjRoom.Phase.PLAYING);
-			persist(host.level().getServer());
-			refreshTable(room, host.level().getServer());
+			startRoundWithReady(host, room);
 		});
+	}
+
+	/** Host deals the next hand while players stay at the table after RESOLVED. */
+	public static void dealNext(ServerPlayer host) {
+		roomOf(host.getUUID()).ifPresent(room -> {
+			if (!room.hostId().equals(host.getUUID()) || room.phase() != BjRoom.Phase.PLAYING) {
+				return;
+			}
+			TableBlackjack table = room.table();
+			if (table == null || table.phase() != TableBlackjack.Phase.RESOLVED) {
+				return;
+			}
+			startRoundWithReady(host, room);
+		});
+	}
+
+	private static void startRoundWithReady(ServerPlayer host, BjRoom room) {
+		List<RoomSeat> ready = room.seats().stream().filter(RoomSeat::ready).toList();
+		if (ready.isEmpty()) {
+			host.sendSystemMessage(Component.translatable("minecard.room.need_ready"));
+			return;
+		}
+		long liability = room.maxHouseLiability();
+		if (Wallets.balance(host.getUUID(), room.stakeItem()) < liability) {
+			host.sendSystemMessage(Component.translatable("minecard.room.host_broke", liability));
+			return;
+		}
+		List<TablePlayer> seated = new ArrayList<>();
+		for (RoomSeat seat : ready) {
+			seated.add(new TablePlayer(seat.playerId(), seat.displayName(), seat.bet()));
+		}
+		TableBlackjack table = new TableBlackjack(
+			room.roomId(),
+			room.hostId(),
+			room.stakeItem(),
+			seated,
+			room.rules()
+		);
+		room.setTable(table);
+		room.setPhase(BjRoom.Phase.PLAYING);
+		persist(host.level().getServer());
+		refreshTable(room, host.level().getServer());
 	}
 
 	public static void onTableClick(ServerPlayer player, String action) {
@@ -365,6 +383,27 @@ public final class Rooms {
 				case "split" -> table.split(id);
 				case "insurance_yes" -> table.takeInsurance(id);
 				case "insurance_no" -> table.declineInsurance(id);
+				case "dealer_hit" -> table.dealerHit(id);
+				case "dealer_stand" -> table.dealerStand(id);
+				case "play_again" -> {
+					if (table.phase() == TableBlackjack.Phase.RESOLVED
+						&& !room.hostId().equals(id)
+						&& room.seat(id).map(s -> !s.ready()).orElse(false)) {
+						PlayAgainConfirmDialog.open(player, room);
+						return;
+					}
+				}
+				case "play_again_yes" -> confirmPlayAgain(player, room);
+				case "play_again_no" -> {
+					if (table.phase() == TableBlackjack.Phase.RESOLVED) {
+						TableBlackjackDialog.open(player, room, room.hostId().equals(id));
+						return;
+					}
+				}
+				case "deal_next" -> {
+					dealNext(player);
+					return;
+				}
 				case "leave" -> leave(player);
 				default -> {
 				}
@@ -372,6 +411,22 @@ public final class Rooms {
 			if (PLAYER_ROOM.containsKey(player.getUUID())) {
 				refreshTable(room, player.level().getServer());
 			}
+		});
+	}
+
+	private static void confirmPlayAgain(ServerPlayer player, BjRoom room) {
+		TableBlackjack table = room.table();
+		if (table == null || table.phase() != TableBlackjack.Phase.RESOLVED) {
+			return;
+		}
+		if (room.hostId().equals(player.getUUID())) {
+			return;
+		}
+		room.seat(player.getUUID()).ifPresent(seat -> {
+			seat.setBet(room.minBet());
+			lockBet(player, room, seat);
+			persist(player.level().getServer());
+			refreshTable(room, player.level().getServer());
 		});
 	}
 
@@ -500,32 +555,32 @@ public final class Rooms {
 			return;
 		}
 		if (table.phase() == TableBlackjack.Phase.RESOLVED) {
-			finishRound(room, server);
-			return;
+			clearConsumedLocks(room);
 		}
 		ServerPlayer host = server.getPlayerList().getPlayer(room.hostId());
 		if (host != null) {
 			TableBlackjackDialog.open(host, room, true);
 		}
-		for (TablePlayer tp : table.players()) {
-			ServerPlayer p = server.getPlayerList().getPlayer(tp.playerId());
+		// Keep every seated player on the table UI (including those sitting out this hand).
+		for (RoomSeat seat : room.seats()) {
+			ServerPlayer p = server.getPlayerList().getPlayer(seat.playerId());
 			if (p != null) {
 				TableBlackjackDialog.open(p, room, false);
 			}
 		}
 	}
 
-	private static void finishRound(BjRoom room, MinecraftServer server) {
+	/** Escrow already settled into wallets; drop lock markers once per resolved table. */
+	private static void clearConsumedLocks(BjRoom room) {
+		if (room.postSettleCleared()) {
+			return;
+		}
 		for (RoomSeat seat : room.seats()) {
-			// Bets were consumed at ready; clear lock markers without double-refund.
 			seat.setLock(null);
 			seat.setReady(false);
-			seat.setBet(WalletConstants.DEFAULT_BET);
+			seat.setBet(room.minBet());
 		}
-		room.setTable(null);
-		room.setPhase(BjRoom.Phase.LOBBY);
-		persist(server);
-		refreshLobby(room, server);
+		room.setPostSettleCleared(true);
 	}
 
 	private static void tick(MinecraftServer server) {
