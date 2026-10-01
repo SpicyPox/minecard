@@ -11,9 +11,19 @@ import java.util.List;
 /**
  * Shared glyph layout helpers for dialog hands.
  * Prefer one horizontal row per seat (set {@code perRow} to the hand size).
+ * Glyph GUI size comes from {@code assets/minecard/font/cards.json} {@code height}
+ * (currently 24) — keep hands short enough to fit {@link #DIALOG_WIDTH}.
  */
 public final class CardLayer {
-	public static final int DIALOG_WIDTH = 400;
+	/** Must stay in sync with bitmap font {@code height} in cards.json. */
+	public static final int GLYPH_HEIGHT = 24;
+	public static final int DIALOG_WIDTH = 300;
+
+	/** Max cards that fit in one dialog row at {@link #GLYPH_HEIGHT}. */
+	public static int maxPerRow() {
+		// approximate square glyphs + 1px gap; leave margin for scrollbar/padding
+		return Math.max(1, (DIALOG_WIDTH - 16) / (GLYPH_HEIGHT + 2));
+	}
 
 	private CardLayer() {
 	}

@@ -18,9 +18,11 @@ SUITS = ("spades", "hearts", "diamonds", "clubs")
 RANKS = ("a", "2", "3", "4", "5", "6", "7", "8", "9", "10", "j", "q", "k")
 
 # source_path relative to assets/ -> our texture key
-DECKS: dict[str, dict[str, str]] = {
+DECKS: dict[str, dict] = {
 	"kenney_large": {
 		"label": "Kenney Playing Cards Pack (large, CC0)",
+		# GUI glyph height (dialog rows); PNG stays full resolution.
+		"display_height": 24,
 		"map": {
 			**{
 				f"{suit}_{rank}": f"playing-cards-pack/PNG/Cards (large)/card_{suit}_{'A' if rank == 'a' else 'J' if rank == 'j' else 'Q' if rank == 'q' else 'K' if rank == 'k' else rank.zfill(2) if rank.isdigit() and len(rank) == 1 else rank}.png"
@@ -151,11 +153,13 @@ def import_deck(deck_id: str) -> None:
 
 	sample = TEX / f"{ordered[0]}.png"
 	_w, h = png_size(sample)
-	write_font(ordered, h)
+	# Bitmap font `height` is GUI render size; keep full-res PNGs but draw small enough for dialog rows.
+	display_h = int(deck.get("display_height", 24))
+	write_font(ordered, display_h)
 	ACTIVE.write_text(f"{deck_id}\n{deck['label']}\n", encoding="utf-8")
 	print(f"Imported {deck_id}: {deck['label']}")
 	print(f"  textures -> {TEX}")
-	print(f"  face size: {_w}x{h}")
+	print(f"  face size: {_w}x{h} (GUI glyph height {display_h})")
 	print(f"  faces: {sum(1 for k in ordered if k not in ('back', 'joker_color', 'joker_bw'))}")
 
 
