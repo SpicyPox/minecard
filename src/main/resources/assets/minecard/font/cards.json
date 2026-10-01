@@ -3,8 +3,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_a.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -12,8 +12,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_2.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -21,8 +21,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_3.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -30,8 +30,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_4.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -39,8 +39,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_5.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -48,8 +48,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_6.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -57,8 +57,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_7.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -66,8 +66,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_8.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -75,8 +75,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_9.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -84,8 +84,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_10.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -93,8 +93,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_j.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -102,8 +102,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_q.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -111,8 +111,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/spades_k.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -120,8 +120,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_a.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -129,8 +129,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_2.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -138,8 +138,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_3.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -147,8 +147,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_4.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -156,8 +156,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_5.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -165,8 +165,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_6.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -174,8 +174,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_7.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -183,8 +183,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_8.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -192,8 +192,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_9.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -201,8 +201,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_10.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -210,8 +210,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_j.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -219,8 +219,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_q.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -228,8 +228,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/hearts_k.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -237,8 +237,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_a.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -246,8 +246,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_2.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -255,8 +255,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_3.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -264,8 +264,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_4.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -273,8 +273,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_5.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -282,8 +282,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_6.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -291,8 +291,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_7.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -300,8 +300,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_8.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -309,8 +309,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_9.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -318,8 +318,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_10.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -327,8 +327,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_j.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -336,8 +336,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_q.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -345,8 +345,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/diamonds_k.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -354,8 +354,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_a.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -363,8 +363,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_2.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -372,8 +372,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_3.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -381,8 +381,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_4.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -390,8 +390,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_5.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -399,8 +399,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_6.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -408,8 +408,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_7.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -417,8 +417,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_8.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -426,8 +426,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_9.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -435,8 +435,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_10.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -444,8 +444,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_j.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -453,8 +453,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_q.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -462,8 +462,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/clubs_k.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -471,8 +471,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/back.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -480,8 +480,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/joker_color.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]
@@ -489,8 +489,8 @@
     {
       "type": "bitmap",
       "file": "minecard:font/cards/joker_bw.png",
-      "ascent": 48,
-      "height": 56,
+      "ascent": 56,
+      "height": 64,
       "chars": [
         ""
       ]

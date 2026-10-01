@@ -37,3 +37,12 @@ remappedSrc/
 
 # Generated pack artifacts (rebuilt on run)
 config/minecard/pack.zip
+config/minecard/minecard-cards.zip
+
+# Large source decks (import into mod resources instead)
+assets/Inscryption Inspired - Deck of Playing Cards/
+assets/KINs_Playing_Cards/
+assets/sgh_kortit/
+assets/assets_8bit_playing_cards/
+assets/playing-cards-pack/PNG/Cards (small)/
+assets/playing-cards-pack/PNG/Cards (medium)/

@@ -6,5 +6,6 @@
 	"minecard.cards.suit.spades": "Bích",
 	"minecard.cards.suit.hearts": "Cơ",
 	"minecard.cards.suit.diamonds": "Rô",
-	"minecard.cards.suit.clubs": "Chuồn"
+	"minecard.cards.suit.clubs": "Chuồn",
+	"minecard.pack.prompt": "Minecard cần resource pack này để hiện hình lá bài."
 }
