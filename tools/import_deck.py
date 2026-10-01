@@ -22,7 +22,7 @@ DECKS: dict[str, dict] = {
 	"kenney_large": {
 		"label": "Kenney Playing Cards Pack (large, CC0)",
 		# GUI glyph height (dialog rows); PNG stays full resolution.
-		"display_height": 24,
+		"display_height": 36,
 		"map": {
 			**{
 				f"{suit}_{rank}": f"playing-cards-pack/PNG/Cards (large)/card_{suit}_{'A' if rank == 'a' else 'J' if rank == 'j' else 'Q' if rank == 'q' else 'K' if rank == 'k' else rank.zfill(2) if rank.isdigit() and len(rank) == 1 else rank}.png"

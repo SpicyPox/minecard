@@ -16,8 +16,8 @@ import java.util.List;
  */
 public final class CardLayer {
 	/** Must stay in sync with bitmap font {@code height} in cards.json. */
-	public static final int GLYPH_HEIGHT = 24;
-	public static final int DIALOG_WIDTH = 300;
+	public static final int GLYPH_HEIGHT = 36;
+	public static final int DIALOG_WIDTH = 360;
 
 	/** Max cards that fit in one dialog row at {@link #GLYPH_HEIGHT}. */
 	public static int maxPerRow() {

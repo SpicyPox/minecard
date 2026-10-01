@@ -31,9 +31,10 @@ public record CardGrid(Component label, List<Card> cards, boolean[] faceUp) {
 	}
 
 	public PlainMessage toBody() {
+		// Blank line under the label so tall bitmap glyphs don't paint over the title.
 		MutableComponent text = Component.empty()
 			.append(label)
-			.append(Component.literal("\n"))
+			.append(Component.literal("\n\n"))
 			.append(CardLayer.handLine(cards, faceUp));
 		return new PlainMessage(text, CardLayer.DIALOG_WIDTH);
 	}
