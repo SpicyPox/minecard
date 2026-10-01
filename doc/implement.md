@@ -6,7 +6,7 @@ Làm đúng một mốc rồi mới sang mốc sau. Mốc 1 chặn mọi thứ k
 
 ## Mốc
 
-1. **52 quân trên GUI.** Dựng project Fabric 26.3 vừa đủ để mở dialog. Model 4 chất × 13 rank. Hình lá lấy từ bộ trong `assets/` (test trước: Kenney large, CC0) qua `python tools/import_deck.py kenney_large`, cộng mặt sau. Resource pack font bitmap, mỗi quân một glyph; server gửi pack lúc join. Lệnh `/minecard cards` mở dialog, xếp theo chất, mỗi lá đúng rank và chất, cạnh đó có tên. Client vanilla chấp nhận pack phải nhìn ra 52 mặt khác nhau. Hai joker chỉ là asset phụ, không tính vào điều kiện xong mốc này.
+1. **52 quân trên GUI.** Dựng project Fabric 26.3 vừa đủ để mở dialog. Model 4 chất × 13 rank. Hình lá lấy từ bộ trong `assets/` (test trước: Kenney large, CC0) qua `python tools/import_deck.py kenney_large`, cộng mặt sau. Resource pack font bitmap, mỗi quân một glyph; server mời pack lúc join (không force). Layout: hàng ngang `CardGrid` — Poker/Blackjack 5 hàng (1 cái hoặc bài chung + 4 người). `/minecard cards [poker|blackjack]` showcase. Client nhận pack phải nhìn ra mặt lá đúng chất/rank. Hai joker chỉ là asset phụ, không tính vào điều kiện xong mốc này.
 2. **Ví và escrow.** Balance theo item, trừ balance rồi tới túi, hoàn khi ngắt kết nối, túi đầy, cả bàn thoát, server dừng. Chi tiết ở [ke-hoach.md](ke-hoach.md).
 3. **Phòng.** Tạo, mời, chat công khai, sảnh.
 4. **Blackjack.** Luật, timer, trả thưởng, dùng đúng glyph của mốc 1 cho từng lá.

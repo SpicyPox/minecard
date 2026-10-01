@@ -124,7 +124,7 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 
 - 52 quân: 4 chất bích, cơ, rô, chuồn; mỗi chất A, 2–10, J, Q, K. Hình đúng chất và đúng rank.
 - Thêm 2 joker trong bộ asset. Blackjack mặc định không chia joker. Joker chỉ vào bộ bài khi phòng bật, hoặc khi game sau (Liar’s Bar) cần.
-- Client vanilla không cài mod. Hình lá nằm trong resource pack của server: mỗi quân là một glyph font, vẽ trong dialog đủ lớn để đọc chất và rank. Cạnh lá vẫn có chữ (ví dụ Át cơ) để đối chiếu.
+- Client vanilla không cài mod. Hình lá nằm trong resource pack của server: mỗi quân là một glyph font, vẽ trong dialog đủ lớn để đọc chất và rank. Server **mời** pack lúc join, không bắt buộc (từ chối không bị kick). Layout bàn dùng **hàng ngang** (`CardGrid` / `CardLayer`): Poker và Blackjack đều 5 hàng (1 cái/bài chung + 4 người). `/minecard cards [poker|blackjack]` là showcase.
 - Pack gửi lúc vào server. Chủ server bật `require-resource-pack=true` nếu muốn buộc hiện hình. Mod không tự đá người từ chối pack.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 

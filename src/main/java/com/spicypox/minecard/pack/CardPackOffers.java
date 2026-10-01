@@ -55,11 +55,12 @@ public final class CardPackOffers {
 		if (pack == null || packUrl == null) {
 			return;
 		}
+		// Optional: never force-kick if the player declines the pack.
 		player.connection.send(new ClientboundResourcePackPushPacket(
 			pack.id(),
 			packUrl,
 			pack.sha1Hex(),
-			true,
+			false,
 			Optional.of(Component.translatable("minecard.pack.prompt"))
 		));
 	}

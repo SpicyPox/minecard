@@ -1,11 +1,13 @@
 {
-	"minecard.help": "Minecard — dùng /minecard cards để xem bộ 52 quân",
-	"minecard.cards.title": "Minecard — 52 quân bài",
-	"minecard.cards.intro": "Đủ bộ: %s mặt. Mỗi glyph là một chất và rank riêng.",
-	"minecard.cards.opened": "Đã mở catalog 52 quân",
-	"minecard.cards.suit.spades": "Bích",
-	"minecard.cards.suit.hearts": "Cơ",
-	"minecard.cards.suit.diamonds": "Rô",
-	"minecard.cards.suit.clubs": "Chuồn",
-	"minecard.pack.prompt": "Minecard cần resource pack này để hiện hình lá bài."
+	"minecard.help": "Minecard — /minecard cards [poker|blackjack]",
+	"minecard.cards.title.poker": "Minecard — bàn Poker",
+	"minecard.cards.title.blackjack": "Minecard — bàn Blackjack",
+	"minecard.cards.intro.poker": "Showcase: 5 hàng (bài chung + 4 người). Pack tuỳ chọn để thấy hình lá (%s glyph).",
+	"minecard.cards.intro.blackjack": "Showcase: 5 hàng (cái + 4 người). Pack tuỳ chọn để thấy hình lá (%s glyph).",
+	"minecard.cards.opened.poker": "Đã mở showcase bàn Poker",
+	"minecard.cards.opened.blackjack": "Đã mở showcase bàn Blackjack",
+	"minecard.table.board": "Bài chung",
+	"minecard.table.dealer": "Cái",
+	"minecard.table.player": "Người %s",
+	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hình lá thật trên dialog. Từ chối vẫn vào được, không kick."
 }

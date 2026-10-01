@@ -2,14 +2,15 @@ package com.spicypox.minecard.gametest;
 
 import com.spicypox.minecard.card.CardGlyphs;
 import com.spicypox.minecard.ui.CardCatalogDialog;
+import com.spicypox.minecard.ui.CardGrid;
+import com.spicypox.minecard.ui.GameTableShowcases;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.dialog.NoticeDialog;
-import net.minecraft.server.dialog.body.DialogBody;
-import net.minecraft.server.dialog.body.PlainMessage;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public final class CardCatalogGameTest {
@@ -29,21 +30,22 @@ public final class CardCatalogGameTest {
 		}
 		helper.assertTrue(chars.size() == 52, "expected 52 unique face codepoints");
 
-		// Mock players have no connection; assert the notice payload instead of openDialog.
-		NoticeDialog notice = CardCatalogDialog.buildNotice();
-		helper.assertTrue(notice.common().body().size() >= 5, "intro + 4 suit rows (+ legend)");
-		int faceMentions = 0;
-		for (DialogBody part : notice.common().body()) {
-			if (part instanceof PlainMessage message) {
-				String text = message.contents().getString();
-				for (String ch : chars) {
-					if (text.contains(ch)) {
-						faceMentions++;
-					}
-				}
-			}
+		List<CardGrid> poker = GameTableShowcases.poker(GameTableShowcases.SEED);
+		helper.assertTrue(poker.size() == 5, "poker: board + 4 players");
+		helper.assertTrue(poker.getFirst().cards().size() == 5, "poker board is 5 cards");
+		for (int i = 1; i < 5; i++) {
+			helper.assertTrue(poker.get(i).cards().size() == 2, "poker player hole is 2");
 		}
-		helper.assertTrue(faceMentions >= 52, "dialog body must include all 52 face glyphs");
+
+		List<CardGrid> bj = GameTableShowcases.blackjack(GameTableShowcases.SEED);
+		helper.assertTrue(bj.size() == 5, "blackjack: dealer + 4 players");
+		helper.assertTrue(bj.getFirst().cards().size() == 2, "dealer has 2 cards");
+		helper.assertTrue(bj.getFirst().faceUp()[0] && !bj.getFirst().faceUp()[1], "dealer hole face-down");
+
+		NoticeDialog pokerDialog = CardCatalogDialog.buildNotice(CardCatalogDialog.Mode.POKER);
+		helper.assertTrue(pokerDialog.common().body().size() == 6, "intro + 5 grids");
+		NoticeDialog bjDialog = CardCatalogDialog.buildNotice(CardCatalogDialog.Mode.BLACKJACK);
+		helper.assertTrue(bjDialog.common().body().size() == 6, "intro + 5 grids");
 		helper.succeed();
 	}
 }

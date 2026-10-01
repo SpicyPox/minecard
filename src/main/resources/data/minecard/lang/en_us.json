@@ -1,11 +1,13 @@
 {
-	"minecard.help": "Minecard — use /minecard cards to preview the 52-card deck",
-	"minecard.cards.title": "Minecard — 52 cards",
-	"minecard.cards.intro": "Full deck: %s faces. Each glyph is a unique suit and rank.",
-	"minecard.cards.opened": "Opened the 52-card catalog",
-	"minecard.cards.suit.spades": "Spades",
-	"minecard.cards.suit.hearts": "Hearts",
-	"minecard.cards.suit.diamonds": "Diamonds",
-	"minecard.cards.suit.clubs": "Clubs",
-	"minecard.pack.prompt": "Minecard needs this pack to show real card faces."
+	"minecard.help": "Minecard — /minecard cards [poker|blackjack]",
+	"minecard.cards.title.poker": "Minecard — Poker table",
+	"minecard.cards.title.blackjack": "Minecard — Blackjack table",
+	"minecard.cards.intro.poker": "Showcase: 5 rows (board + 4 players). Optional pack for real faces (%s glyphs).",
+	"minecard.cards.intro.blackjack": "Showcase: 5 rows (dealer + 4 players). Optional pack for real faces (%s glyphs).",
+	"minecard.cards.opened.poker": "Opened the poker table showcase",
+	"minecard.cards.opened.blackjack": "Opened the blackjack table showcase",
+	"minecard.table.board": "Board",
+	"minecard.table.dealer": "Dealer",
+	"minecard.table.player": "Player %s",
+	"minecard.pack.prompt": "Optional Minecard pack — real card faces in dialogs. Decline keeps vanilla text fallback."
 }
