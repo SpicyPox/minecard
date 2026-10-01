@@ -1,6 +1,7 @@
 package com.spicypox.minecard.mixin;
 
 import com.spicypox.minecard.dialog.DialogClicks;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.common.ServerboundCustomClickActionPacket;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -16,7 +17,11 @@ public abstract class ServerCommonPacketListenerImplMixin {
 		if (!((Object) this instanceof ServerGamePacketListenerImpl game)) {
 			return;
 		}
-		if (DialogClicks.handle(game.player, packet.id())) {
+		CompoundTag payload = packet.payload()
+			.filter(tag -> tag instanceof CompoundTag)
+			.map(tag -> (CompoundTag) tag)
+			.orElseGet(CompoundTag::new);
+		if (DialogClicks.handle(game.player, packet.id(), payload)) {
 			ci.cancel();
 		}
 	}

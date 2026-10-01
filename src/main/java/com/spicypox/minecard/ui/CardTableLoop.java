@@ -196,7 +196,7 @@ public final class CardTableLoop {
 				CardLayer.DIALOG_WIDTH
 			));
 			for (CardGrid grid : toGrids(onTable, faceUp)) {
-				body.add(grid.toBody());
+				body.addAll(grid.toBodies());
 			}
 
 			// custom click → mixin stops the session (run_command is unreliable from dialogs).

@@ -6,5 +6,7 @@ public enum BlackjackOutcome {
 	LOSE,
 	PUSH,
 	PLAYER_BUST,
-	DEALER_BUST
+	DEALER_BUST,
+	/** Late surrender — half stake returned. */
+	SURRENDER
 }

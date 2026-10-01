@@ -1,9 +1,13 @@
 package com.spicypox.minecard.game.blackjack;
 
 import com.spicypox.minecard.ui.Dialogs;
+import com.spicypox.minecard.wallet.SessionSavedData;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -25,11 +29,12 @@ public final class BlackjackGames {
 		}
 		registered = true;
 		ServerTickEvents.END_SERVER_TICK.register(BlackjackGames::tick);
+		ServerLifecycleEvents.SERVER_STOPPING.register(BlackjackGames::persistAll);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			BlackjackSession session = SESSIONS.get(handler.player.getUUID());
 			if (session != null) {
-				// Keep escrow + snapshot; timer keeps running (emergency semantics).
 				session.emergencyAway();
+				persist(server, session);
 			}
 		});
 	}
@@ -42,37 +47,34 @@ public final class BlackjackGames {
 			player.sendSystemMessage(Component.translatable("minecard.bj.resumed"));
 			return;
 		}
-		BlackjackSession session = new BlackjackSession(player.getUUID());
+		BlackjackSession session = SessionSavedData.get(player.level().getServer())
+			.getSolo(player.getUUID())
+			.map(BlackjackSession::fromState)
+			.orElseGet(() -> new BlackjackSession(player.getUUID()));
 		SESSIONS.put(player.getUUID(), session);
 		BlackjackDialog.open(player, session);
+		if (session.phase() != BlackjackSession.Phase.DEALING
+			|| session.reveal().dealStep() > 0) {
+			player.sendSystemMessage(Component.translatable("minecard.bj.resumed"));
+		}
+	}
+
+	private static void persist(MinecraftServer server, BlackjackSession session) {
+		if (server == null) {
+			return;
+		}
+		SessionSavedData.get(server).putSolo(session.playerId(), session.snapshot());
+	}
+
+	private static void persistAll(MinecraftServer server) {
+		for (BlackjackSession session : SESSIONS.values()) {
+			persist(server, session);
+		}
 	}
 
 	public static void onClick(ServerPlayer player, String action) {
-		if ("leave".equals(action) || "close".equals(action)) {
-			BlackjackSession session = SESSIONS.remove(player.getUUID());
-			if (session != null) {
-				session.leave();
-			}
-			Dialogs.clear(player);
-			player.sendSystemMessage(Component.translatable("minecard.bj.left"));
-			return;
-		}
-		if ("emergency".equals(action)) {
-			BlackjackSession session = SESSIONS.get(player.getUUID());
-			if (session == null) {
-				Dialogs.clear(player);
-				return;
-			}
-			if (session.phase() == BlackjackSession.Phase.RESOLVED) {
-				SESSIONS.remove(player.getUUID());
-				session.leave();
-				Dialogs.clear(player);
-				return;
-			}
-			session.emergencyAway();
-			Dialogs.clear(player);
-			player.sendSystemMessage(Component.translatable("minecard.bj.emergency_hint"));
-			pushTimerChat(player, session);
+		if ("leave".equals(action) || "close".equals(action) || "emergency".equals(action)) {
+			handleLeave(player);
 			return;
 		}
 
@@ -82,7 +84,19 @@ public final class BlackjackGames {
 			return;
 		}
 		if (session.phase() == BlackjackSession.Phase.DEALING
-			|| session.phase() == BlackjackSession.Phase.COLLECTING) {
+			|| session.phase() == BlackjackSession.Phase.COLLECTING
+			|| session.phase() == BlackjackSession.Phase.DEALER_TURN) {
+			return;
+		}
+		if (session.phase() == BlackjackSession.Phase.INSURANCE) {
+			switch (action) {
+				case "insurance_yes" -> session.takeInsurance();
+				case "insurance_no" -> session.declineInsurance();
+				default -> {
+					return;
+				}
+			}
+			BlackjackDialog.open(player, session);
 			return;
 		}
 		switch (action) {
@@ -90,8 +104,9 @@ public final class BlackjackGames {
 			case "stand" -> session.stand();
 			case "double" -> session.doubleDown();
 			case "split" -> session.split();
+			case "surrender" -> session.surrender();
 			case "again" -> session.playAgain();
-			case "wait", "pad" -> {
+			case "wait" -> {
 				return;
 			}
 			default -> {
@@ -101,14 +116,50 @@ public final class BlackjackGames {
 		BlackjackDialog.open(player, session);
 	}
 
+	/**
+	 * Footer Leave / ESC: mid-round steps away (state kept, timer in chat);
+	 * resolved / idle ends the table and refunds held stake.
+	 */
+	private static void handleLeave(ServerPlayer player) {
+		BlackjackSession session = SESSIONS.get(player.getUUID());
+		if (session == null) {
+			Dialogs.clear(player);
+			return;
+		}
+		if (session.phase() == BlackjackSession.Phase.RESOLVED
+			|| session.phase() == BlackjackSession.Phase.COLLECTING) {
+			SESSIONS.remove(player.getUUID());
+			session.leave();
+			SessionSavedData.get(player.level().getServer()).removeSolo(player.getUUID());
+			Dialogs.clear(player);
+			player.sendSystemMessage(styled(
+				"minecard.bj.left",
+				ChatFormatting.GRAY
+			));
+			return;
+		}
+		session.emergencyAway();
+		persist(player.level().getServer(), session);
+		Dialogs.clear(player);
+		player.sendSystemMessage(styled("minecard.bj.leave_away", ChatFormatting.YELLOW));
+		pushTimerChat(player, session);
+	}
+
 	private static void pushTimerChat(ServerPlayer player, BlackjackSession session) {
 		if (session.phase() != BlackjackSession.Phase.PLAYER_TURN) {
 			return;
 		}
-		player.sendSystemMessage(Component.translatable(
-			"minecard.bj.timer.chat",
-			session.turnSecondsLeft()
-		));
+		MutableComponent line = Component.empty()
+			.append(Component.translatable("minecard.bj.timer.prefix").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+			.append(Component.translatable("minecard.bj.timer.chat", session.turnSecondsLeft())
+				.withStyle(ChatFormatting.GRAY));
+		player.sendSystemMessage(line);
+	}
+
+	private static Component styled(String key, ChatFormatting color) {
+		return Component.empty()
+			.append(Component.translatable("minecard.bj.timer.prefix").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+			.append(Component.translatable(key).withStyle(color));
 	}
 
 	public static void stop(UUID playerId) {
@@ -118,7 +169,11 @@ public final class BlackjackGames {
 		}
 	}
 
-	/** Expose live session for tests / future room restore. */
+	public static void stop(ServerPlayer player) {
+		stop(player.getUUID());
+		SessionSavedData.get(player.level().getServer()).removeSolo(player.getUUID());
+	}
+
 	public static BlackjackSession session(UUID playerId) {
 		return SESSIONS.get(playerId);
 	}
@@ -137,22 +192,38 @@ public final class BlackjackGames {
 			boolean animStep = session.tick();
 			boolean timerPulse = session.tickTurnTimer();
 			boolean dirty = session.consumeDirty();
-			boolean refresh = animStep || timerPulse || dirty;
+			if (dirty || animStep) {
+				persist(server, session);
+			}
 
 			if (player == null) {
-				// Offline: keep session; emergency timeout may resolve to lose.
 				continue;
 			}
+
 			if (session.dialogAway()) {
-				if (timerPulse && session.phase() == BlackjackSession.Phase.PLAYER_TURN) {
+				// Chat countdown only while away (Leave/ESC); stops when /bj reopens the dialog.
+				if (timerPulse && (session.phase() == BlackjackSession.Phase.PLAYER_TURN
+					|| session.phase() == BlackjackSession.Phase.INSURANCE)) {
 					pushTimerChat(player, session);
 				}
 				if (session.phase() == BlackjackSession.Phase.RESOLVED && dirty) {
-					player.sendSystemMessage(Component.translatable("minecard.bj.emergency_timeout"));
+					player.sendSystemMessage(styled("minecard.bj.emergency_timeout", ChatFormatting.RED));
 				}
 				continue;
 			}
-			if (refresh) {
+
+			// Live timer on action bar — do NOT reopen the dialog each second (resets scroll).
+			if (timerPulse && (session.phase() == BlackjackSession.Phase.PLAYER_TURN
+				|| session.phase() == BlackjackSession.Phase.INSURANCE)) {
+				player.sendSystemMessage(
+					Component.translatable("minecard.bj.timer.actionbar", session.turnSecondsLeft())
+						.withStyle(ChatFormatting.GOLD),
+					true
+				);
+			}
+
+			// Refresh only when the table actually changes (deal / hit / buttons).
+			if (animStep || dirty) {
 				BlackjackDialog.open(player, session);
 			}
 		}

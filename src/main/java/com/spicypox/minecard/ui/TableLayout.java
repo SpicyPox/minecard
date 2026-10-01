@@ -21,7 +21,7 @@ public final class TableLayout {
 		List<DialogBody> body = new ArrayList<>();
 		body.add(new net.minecraft.server.dialog.body.PlainMessage(intro, CardLayer.DIALOG_WIDTH));
 		for (CardGrid grid : grids) {
-			body.add(grid.toBody());
+			body.addAll(grid.toBodies());
 		}
 
 		ActionButton ok = new ActionButton(

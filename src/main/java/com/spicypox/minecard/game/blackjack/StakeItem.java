@@ -30,13 +30,18 @@ public final class StakeItem {
 		return new ItemStack(item(id)).getHoverName();
 	}
 
+	/** Friendly stake line, e.g. "Diamond × 10" — never the registry id. */
+	public static Component amountLine(Identifier id, long amount) {
+		return Component.translatable("minecard.stake.amount_line", displayName(id), amount);
+	}
+
 	/**
-	 * Dialog body: item icon + description (amounts for this stake type only).
+	 * Dialog body: item icon immediately left of description (stake amounts).
 	 */
 	public static ItemBody iconWithDescription(Identifier id, Component description, int descWidth) {
 		return new ItemBody(
 			new ItemStackTemplate(item(id), 1),
-			Optional.of(new PlainMessage(description, descWidth)),
+			Optional.of(new PlainMessage(description, Math.max(80, descWidth))),
 			false,
 			true,
 			16,

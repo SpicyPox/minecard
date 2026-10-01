@@ -6,7 +6,7 @@ Client vanilla join bình thường vì mod không đăng ký item, block, entit
 
 Không quy đổi sang tiền thật, không tỉ giá giữa các vật phẩm, không Vault hay tiền tệ mod khác. Phòng táo vàng chỉ nhận táo vàng.
 
-Thứ tự làm và ràng buộc cho Cursor nằm ở [implement.md](implement.md). Mốc đầu tiên ở đó là hiện đủ 52 quân trên GUI.
+Thứ tự làm và ràng buộc cho Cursor nằm ở [implement.md](implement.md). Mốc đầu tiên ở đó là hiện đủ 52 quân trên GUI. Luật BJ/Poker chi tiết (kèm tag DEMO/ROOM): [minecard_game_rules_poker_blackjack.md](minecard_game_rules_poker_blackjack.md). Lưu trữ ví/session (SavedData) và lịch sử/stats (SQLite): [data-and-history.md](data-and-history.md).
 
 ## Vì sao client vanilla vẫn dùng được
 
@@ -73,13 +73,15 @@ Mỗi khoản khóa ghi riêng số lấy từ balance và số lấy từ túi,
 flowchart TD
   openMenu["/minecard hoặc click chat"] --> mainDialog[Dialog chính]
   mainDialog --> wallet[Nạp hoặc rút đúng item]
-  mainDialog --> createRoom[Tạo phòng]
-  createRoom --> choose{Công khai?}
-  choose -->|Có| chatJoin[Chat có nút Vào bàn]
-  choose -->|Không| invite[Mời từng người]
+  mainDialog --> createRoom[Wizard tạo phòng]
+  createRoom --> pickGame[Chọn BJ hoặc Poker]
+  pickGame -->|BJ| settings[Luật: timer decks seats ...]
+  settings --> stake[Số lượng + item cược]
+  stake -->|đủ balance hoặc tay| chatJoin[Chat: mã phòng + Vào bàn]
   chatJoin --> lobby[Sảnh]
-  invite --> lobby
-  lobby --> bets[Mỗi người chọn mức cược]
+  mainDialog --> joinCode[Nhập mã phòng]
+  joinCode --> lobby
+  lobby --> bets[Ready khóa cược]
   bets --> hand[Ván Blackjack]
   hand --> payout[Trả về ví từng item]
   payout --> lobby
@@ -127,7 +129,16 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 - Client vanilla không cài mod. Hình lá nằm trong resource pack của server: mỗi quân là một glyph font, vẽ trong dialog với `height` GUI ≈36 để vừa một hàng mà vẫn đọc được. Server **mời** pack lúc join, không bắt buộc (từ chối không bị kick). Layout bàn dùng **hàng ngang** (`CardGrid` / `CardLayer`): Poker và Blackjack đều 5 hàng (1 cái/bài chung + 4 người). `/minecard cards [poker|blackjack]` là showcase.
 - **Chọn lá (vanilla):** không click trực tiếp glyph trong `PlainMessage`. Cách làm: `multi_action` — mỗi lá một `ActionButton` (label = glyph), `action` kiểu `custom` + NBT id lá; server nhận `custom_click`. Hoặc `single_option` input (radio/dropdown) rồi nút xác nhận. Cả hai đều protocol vanilla, không cần mod client.
 - **Hiệu ứng lật/phát:** dialog vanilla không có animation 3D. Cách làm: đổi glyph mặt ↔ mặt sau rồi `openDialog` lại theo tick. `/minecard cards loop` demo vòng 5s phát (từng lá úp) → 5s lật ngửa → 5s lật úp → 5s thu bài; `/minecard cards stop` dừng.
-- **Blackjack solo (demo):** `/minecard bj` — HUD: icon item đang chơi (`ItemBody`) + cược / đang giữ / balance **đúng loại đó** + timer 25s. Lưới trên (2 cột): Hit / Stand / Double / Split / Chơi lại; **hàng dưới 2 nút: Rời phòng | Khẩn cấp** (ESC = Khẩn cấp). Leave hoàn cược + `ClearDialog`. Khẩn cấp/ESC: lưu state, đóng dialog, **đếm ngược đẩy lên chat** mỗi giây; hết giờ away = thua; `/minecard bj` mở lại. Hết giờ khi còn dialog = stand. `DemoBank` theo item id đến ví mốc 2.
+- **Menu:** `/minecard` / `/bj` mở dialog chính (Bank sgui, tạo phòng wizard, ô nhập mã phòng, hồ sơ). Không còn solo BJ trên menu. `/minecard join <id>`; `/pk` showcase poker.
+- **Tạo phòng:** chọn game → (BJ) chỉnh luật mặc định → chọn số lượng + item cược → kiểm balance rồi tay chính/phụ → broadcast chat mã phòng + link join.
+- **Bank:** GUI chest server-side qua **sgui** (vanilla client). Hai chế độ — **Nạp** (ô trống để staging, bỏ đồ vào rồi bấm Confirm mới cộng ví; đóng/không Confirm thì trả đồ về túi) và **Rút** (hiện đúng stack ví, lấy ra là trừ ví). Menu có 2 nút; trong chest có Compass để chuyển chế độ. Hàng dưới: ◀ / Switch / Confirm / Close / ▶.
+- **Ví:** `WalletSavedData` (world, nhiều item id); escrow balance→túi. SQLite history — [data-and-history.md](data-and-history.md).
+- **Blackjack phòng (MVP):** chủ = nhà cái (không cầm bài); ghế Ready khóa cược; Start khi host đủ quỹ max 3:2; `TableBlackjack` lượt từng người; bài người khác ẩn đến resolve.
+- **Config:** `config/minecard.json` (tạo mặc định lúc load) — decks phòng, insurance (mặc định bật), surrender (mặc định tắt), soft-17, timer.
+- **Insurance / surrender:** solo + bàn phòng có phase `INSURANCE` khi cái ngửa Át (`insuranceEnabled`); late surrender solo nếu `surrenderEnabled`. Soft-17 / shoe theo config.
+- **Disconnect phòng:** host thoát → đóng phòng hoàn cược; player lobby → refund; đang chơi → auto-stand.
+- **Persist phòng:** `RoomSavedData` giữ sảnh + escrow qua restart; ván giữa chừng → hoàn cược về ví, phòng về LOBBY (không resume mid-hand).
+- **Hồ sơ:** dialog stats W/L/P/BJ, net theo item, hand gần đây + chi tiết; admin `stats`/`ledger`.
 - Pack gửi lúc vào server. Chủ server bật `require-resource-pack=true` nếu muốn buộc hiện hình. Mod không tự đá người từ chối pack.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 
@@ -135,8 +146,8 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 
 Dialog (không cần mod client):
 
-- Chính: số dư theo vật phẩm, tạo phòng, bàn đang mở, luật, hồ sơ.
-- Tạo phòng: loại game (lúc này chỉ Blackjack), vật phẩm trên tay, cược min/max, số ghế (1–5 người chơi), công khai, các luật ở trên.
+- Chính: hint/stats → ô mã phòng → Số dư / Vào / Tạo phòng (1 cột); tạm ẩn hồ sơ. Nạp/Rút/Xem số dư trong menu Số dư; xem chỉ đọc + phân trang. Dialog `pause=false` + `after_action=none`.
+- Tạo phòng (wizard): chọn Blackjack/Poker (Poker báo chưa mở); trang luật BJ (timer, decks, seats, insurance, soft-17, surrender — default từ config); trang cược (số lượng + chọn item từ balance/tay); đủ đồ thì tạo và chat mã + join.
 - Trong ván: từng lá hiện hình đúng quân, điểm, nút Hit / Stand / Double / Split / Insurance / Surrender đúng lúc luật cho phép, thời gian còn lại.
 - Hồ sơ: thắng, thua, hòa, lãi ròng **từng loại vật phẩm** (chỉ thống kê, không đổi vật phẩm).
 
@@ -146,7 +157,7 @@ Ràng buộc thêm: chống spam phòng, hết hạn sảnh nếu không bắt �
 
 ## Khung cho Poker và Liar’s Bar
 
-`GameSession` nhận action dạng id + NBT và tick của server. Blackjack là ván đầu tiên, sau khi mốc 52 quân đã hiện trên GUI. Chưa code ván Poker hay Liar’s Bar trong đợt này; menu tạo phòng chỉ hiện Blackjack. Hai game sau cắm vào cùng ví, phòng, timer và dialog:
+`GameSession` nhận action dạng id + NBT và tick của server. Blackjack là ván đầu tiên, sau khi mốc 52 quân đã hiện trên GUI. Wizard tạo phòng hiện Blackjack và Poker (Poker báo chưa mở). Chưa code ván Poker hay Liar’s Bar trong đợt này. Hai game sau cắm vào cùng ví, phòng, timer và dialog:
 
 - Poker: Texas Hold’em, blind bằng đúng vật phẩm phòng, fold/check/call/raise, side pot.
 - Liar’s Bar: bluff, mỗi người chỉ thấy bài/xúc xắc của mình trong dialog riêng, người thua trả đúng vật phẩm phòng.
