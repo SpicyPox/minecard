@@ -13,6 +13,9 @@
 	"entrypoints": {
 		"main": [
 			"com.spicypox.minecard.Minecard"
+		],
+		"fabric-gametest": [
+			"com.spicypox.minecard.gametest.CardCatalogGameTest"
 		]
 	},
 	"depends": {

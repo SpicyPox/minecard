@@ -23,8 +23,8 @@ public final class CardPackOffers {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			try {
 				pack = CardResourcePack.build();
-				http = PackHttpServer.start(pack, PORT);
-				packUrl = "http://" + HOST + ":" + PORT + "/minecard-cards.zip";
+				http = startHttp(pack);
+				packUrl = "http://" + HOST + ":" + http.port() + "/minecard-cards.zip";
 				Minecard.LOGGER.info("Card pack URL for clients: {}", packUrl);
 			} catch (Exception e) {
 				Minecard.LOGGER.error("Failed to host Minecard card resource pack", e);
@@ -39,6 +39,18 @@ public final class CardPackOffers {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> offer(handler.player));
 	}
 
+	private static PackHttpServer startHttp(CardResourcePack pack) throws Exception {
+		Exception last = null;
+		for (int port = PORT; port < PORT + 16; port++) {
+			try {
+				return PackHttpServer.start(pack, port);
+			} catch (Exception e) {
+				last = e;
+			}
+		}
+		throw last != null ? last : new IllegalStateException("no pack port available");
+	}
+
 	public static void offer(ServerPlayer player) {
 		if (pack == null || packUrl == null) {
 			return;
@@ -47,7 +59,7 @@ public final class CardPackOffers {
 			pack.id(),
 			packUrl,
 			pack.sha1Hex(),
-			false,
+			true,
 			Optional.of(Component.translatable("minecard.pack.prompt"))
 		));
 	}

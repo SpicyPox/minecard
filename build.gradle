@@ -27,6 +27,25 @@ test {
 	useJUnitPlatform()
 }
 
+fabricApi {
+	configureTests {
+		enableGameTests = true
+		enableClientGameTests = false
+		eula = true
+	}
+}
+
+loom {
+	runs {
+		client {
+			programArguments.addAll('--quickPlayMultiplayer', 'localhost:25565')
+		}
+		server {
+			programArguments.addAll('nogui')
+		}
+	}
+}
+
 processResources {
 	def version = project.version
 	inputs.property 'version', version
