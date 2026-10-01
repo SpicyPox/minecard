@@ -10,6 +10,9 @@
 	},
 	"license": "MIT",
 	"environment": "*",
+	"mixins": [
+		"minecard.mixins.json"
+	],
 	"entrypoints": {
 		"main": [
 			"com.spicypox.minecard.Minecard"
