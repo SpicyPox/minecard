@@ -24,6 +24,11 @@ public final class CardCatalogDialog {
 	}
 
 	public static void open(ServerPlayer player) {
+		player.openDialog(Holder.direct(buildNotice()));
+	}
+
+	/** Builds the catalog notice used by {@code /minecard cards}. */
+	public static NoticeDialog buildNotice() {
 		List<DialogBody> body = new ArrayList<>();
 		body.add(new PlainMessage(
 			Component.translatable("minecard.cards.intro", CardGlyphs.count()),
@@ -31,37 +36,9 @@ public final class CardCatalogDialog {
 		));
 
 		for (Suit suit : Suit.values()) {
-			MutableComponent line = Component.empty();
-			boolean first = true;
-			for (Card card : Card.standard52()) {
-				if (card.suit() != suit) {
-					continue;
-				}
-				if (!first) {
-					line.append(Component.literal(" "));
-				}
-				first = false;
-				line.append(CardGlyphs.glyph(card));
-			}
-			body.add(new PlainMessage(
-				Component.empty()
-					.append(Component.translatable("minecard.cards.suit." + suit.id()))
-					.append(Component.literal("\n"))
-					.append(line),
-				300
-			));
+			body.add(new PlainMessage(suitRow(suit), 300));
 		}
-
-		MutableComponent legend = Component.empty();
-		boolean first = true;
-		for (Card card : Card.standard52()) {
-			if (!first) {
-				legend.append(Component.literal("\n"));
-			}
-			first = false;
-			legend.append(CardGlyphs.labeled(card));
-		}
-		body.add(new PlainMessage(legend, 300));
+		body.add(new PlainMessage(legend(), 300));
 
 		ActionButton ok = new ActionButton(
 			new CommonButtonData(Component.translatable("gui.ok"), 150),
@@ -77,7 +54,47 @@ public final class CardCatalogDialog {
 			List.copyOf(body),
 			List.of()
 		);
+		return new NoticeDialog(data, ok);
+	}
 
-		player.openDialog(Holder.direct(new NoticeDialog(data, ok)));
+	/** One glyph Component per standard card, in deck order — used by tests and GUI rows. */
+	public static List<Component> faceGlyphs() {
+		List<Component> glyphs = new ArrayList<>(52);
+		for (Card card : Card.standard52()) {
+			glyphs.add(CardGlyphs.glyph(card));
+		}
+		return glyphs;
+	}
+
+	private static MutableComponent suitRow(Suit suit) {
+		MutableComponent line = Component.empty();
+		boolean first = true;
+		for (Card card : Card.standard52()) {
+			if (card.suit() != suit) {
+				continue;
+			}
+			if (!first) {
+				line.append(Component.literal(" "));
+			}
+			first = false;
+			line.append(CardGlyphs.glyph(card));
+		}
+		return Component.empty()
+			.append(Component.translatable("minecard.cards.suit." + suit.id()))
+			.append(Component.literal("\n"))
+			.append(line);
+	}
+
+	private static MutableComponent legend() {
+		MutableComponent legend = Component.empty();
+		boolean first = true;
+		for (Card card : Card.standard52()) {
+			if (!first) {
+				legend.append(Component.literal("\n"));
+			}
+			first = false;
+			legend.append(CardGlyphs.labeled(card));
+		}
+		return legend;
 	}
 }
