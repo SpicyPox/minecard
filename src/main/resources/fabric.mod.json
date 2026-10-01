@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "minecard",
+	"version": "${version}",
+	"name": "Minecard",
+	"description": "Server-side player gambling rooms. Vanilla clients can join.",
+	"authors": ["SpicyPox"],
+	"contact": {
+		"sources": "https://github.com/SpicyPox/minecard"
+	},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.spicypox.minecard.Minecard"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

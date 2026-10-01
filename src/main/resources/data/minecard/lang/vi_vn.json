@@ -1,0 +1,10 @@
+{
+	"minecard.help": "Minecard — dùng /minecard cards để xem bộ 52 quân",
+	"minecard.cards.title": "Minecard — 52 quân bài",
+	"minecard.cards.intro": "Đủ bộ: %s mặt. Mỗi glyph là một chất và rank riêng.",
+	"minecard.cards.opened": "Đã mở catalog 52 quân",
+	"minecard.cards.suit.spades": "Bích",
+	"minecard.cards.suit.hearts": "Cơ",
+	"minecard.cards.suit.diamonds": "Rô",
+	"minecard.cards.suit.clubs": "Chuồn"
+}

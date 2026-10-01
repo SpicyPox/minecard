@@ -1,0 +1,10 @@
+{
+	"minecard.help": "Minecard — use /minecard cards to preview the 52-card deck",
+	"minecard.cards.title": "Minecard — 52 cards",
+	"minecard.cards.intro": "Full deck: %s faces. Each glyph is a unique suit and rank.",
+	"minecard.cards.opened": "Opened the 52-card catalog",
+	"minecard.cards.suit.spades": "Spades",
+	"minecard.cards.suit.hearts": "Hearts",
+	"minecard.cards.suit.diamonds": "Diamonds",
+	"minecard.cards.suit.clubs": "Clubs"
+}

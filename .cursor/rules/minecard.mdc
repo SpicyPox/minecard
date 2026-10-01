@@ -1,0 +1,17 @@
+---
+description: Minecard server-side Fabric mod constraints and milestone order
+alwaysApply: true
+---
+
+# Minecard
+
+- Read `doc/ke-hoach.md` before changing game rules or UI. Read `doc/implement.md` before choosing what to code next.
+- Finish one milestone before the next. Milestone 1 is done only when `/minecard cards` shows all 52 faces with correct suit and rank on a vanilla-compatible dialog.
+- No custom items, blocks, entities, menus, or custom packets. No client entrypoint. Vanilla clients must be able to join.
+- Card faces in the GUI are bitmap font glyphs for the 52-card deck. Do not use wool colors, item names, or plain text as the card face.
+- No item conversion, chips, PolyWallet, or Vault.
+- LuckPerms is optional on the server. Without a permission plugin, normal players can use play commands; OP gets admin.
+- Bet deduction: balance first, then inventory. Refuse the whole amount if short. Never delete items on full inventory, disconnect, or shutdown.
+- Blackjack does not deal jokers. Poker and Liar's Bar are not part of milestone 1.
+- Player-facing strings go through Server Translations API (`vi_vn`, `en_us`).
+- If behavior changes, update `doc/ke-hoach.md`. If milestone order or Cursor constraints change, update `doc/implement.md`.

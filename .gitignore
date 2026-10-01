@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+out/
+bin/
+run/
+runs/
+logs/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Minecraft / Loom
+*.log
+crash-reports/
+saves/
+remappedSrc/
+
+# Local secrets
+*.pem
+.env
+.env.*
+
+# Generated pack artifacts (rebuilt on run)
+config/minecard/pack.zip
