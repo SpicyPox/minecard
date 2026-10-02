@@ -2,6 +2,7 @@ package com.spicypox.minecard.ui;
 
 import com.spicypox.minecard.Minecard;
 import com.spicypox.minecard.history.HistoryDb;
+import com.spicypox.minecard.pack.CardPackOffers;
 import com.spicypox.minecard.room.CreateRoomDialog;
 import com.spicypox.minecard.room.Rooms;
 import net.minecraft.core.Holder;
@@ -32,6 +33,7 @@ public final class MainMenuDialog {
 	public static final Identifier BALANCE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/balance");
 	public static final Identifier CREATE_ROOM = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/create_room");
 	public static final Identifier JOIN_CODE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/join_code");
+	public static final Identifier PACK = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/pack");
 	public static final Identifier PROFILE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/profile");
 	public static final Identifier CLOSE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "menu/close");
 
@@ -76,7 +78,8 @@ public final class MainMenuDialog {
 		List<ActionButton> actions = List.of(
 			button("minecard.menu.join_code", JOIN_CODE, w),
 			button("minecard.menu.create_room", CREATE_ROOM, w),
-			button("minecard.menu.balance", BALANCE, w)
+			button("minecard.menu.balance", BALANCE, w),
+			button("minecard.menu.pack", PACK, w)
 		);
 
 		ActionButton close = new ActionButton(
@@ -109,6 +112,13 @@ public final class MainMenuDialog {
 				Rooms.join(player, code);
 			}
 			case "join_list" -> Rooms.openPublicList(player);
+			case "pack" -> {
+				if (CardPackOffers.offer(player)) {
+					player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
+				} else {
+					player.sendSystemMessage(Component.translatable("minecard.pack.unavailable"));
+				}
+			}
 			case "profile" -> ProfileDialog.open(player);
 			case "close" -> Dialogs.clear(player);
 			default -> {

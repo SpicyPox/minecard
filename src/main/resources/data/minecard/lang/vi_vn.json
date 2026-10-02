@@ -6,6 +6,7 @@
 	"minecard.menu.bank_deposit": "Nạp vào ngân hàng",
 	"minecard.menu.bank_withdraw": "Rút từ ngân hàng",
 	"minecard.menu.create_room": "Tạo phòng",
+	"minecard.menu.pack": "Tải pack lá bài",
 	"minecard.menu.join_list": "Phòng công khai",
 	"minecard.menu.join_code": "Vào bằng mã phòng",
 	"minecard.menu.room_code": "Mã phòng",
@@ -179,5 +180,7 @@
 	"minecard.bj.leave": "Rời bàn",
 	"minecard.bj.leave_away": "Đã thu gọn bàn — ván được lưu. Timer chạy bên dưới. Hết giờ = mất cửa.",
 	"minecard.bj.emergency_timeout": "Hết giờ khi đang rời bàn — mất cửa.",
-	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hình lá thật trên dialog. Từ chối vẫn vào được, không kick."
+	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hình lá thật trên dialog. Từ chối vẫn vào được, không kick.",
+	"minecard.pack.resent": "Đã gửi lời mời pack — Accept để tải lại.",
+	"minecard.pack.unavailable": "Pack lá bài hiện không sẵn trên server này."
 }

@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.spicypox.minecard.game.blackjack.BlackjackGames;
 import com.spicypox.minecard.history.HistoryDb;
+import com.spicypox.minecard.pack.CardPackOffers;
 import com.spicypox.minecard.room.Rooms;
 import com.spicypox.minecard.ui.CardCatalogDialog;
 import com.spicypox.minecard.ui.CardTableLoop;
@@ -32,6 +33,10 @@ public final class MinecardCommands {
 					.executes(MinecardCommands::startBlackjack))
 				.then(Commands.literal("menu")
 					.executes(MinecardCommands::openMenu))
+				.then(Commands.literal("pack")
+					.executes(MinecardCommands::offerPack))
+				.then(Commands.literal("download")
+					.executes(MinecardCommands::offerPack))
 				.then(Commands.literal("join")
 					.then(Commands.argument("room", StringArgumentType.word())
 						.executes(MinecardCommands::joinRoom)))
@@ -70,6 +75,17 @@ public final class MinecardCommands {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		MainMenuDialog.open(player);
 		return 1;
+	}
+
+	/** Re-offer the optional card resource pack after skip/decline. */
+	private static int offerPack(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		if (CardPackOffers.offer(player)) {
+			player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
+			return 1;
+		}
+		ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
+		return 0;
 	}
 
 	private static int joinRoom(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

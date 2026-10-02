@@ -27,6 +27,9 @@ public final class MinecardConfig {
 	public static int historyRetentionDays = 90;
 	public static long defaultBet = 10L;
 	public static long startingBalance = 128L;
+	/** Hostname/IP clients use to download the card pack; empty → system property → 127.0.0.1. */
+	public static String packHost = "";
+	public static int packPort = 8765;
 
 	private MinecardConfig() {
 	}
@@ -50,6 +53,12 @@ public final class MinecardConfig {
 				if (root.has("startingBalance")) {
 					startingBalance = root.get("startingBalance").getAsLong();
 				}
+				if (root.has("packHost")) {
+					packHost = root.get("packHost").getAsString();
+				}
+				if (root.has("packPort")) {
+					packPort = root.get("packPort").getAsInt();
+				}
 				if (root.has("blackjack")) {
 					JsonObject bj = root.getAsJsonObject("blackjack");
 					soloDecks = getInt(bj, "soloDecks", soloDecks);
@@ -63,8 +72,9 @@ public final class MinecardConfig {
 			}
 			com.spicypox.minecard.wallet.WalletConstants.syncFromConfig(startingBalance, defaultBet);
 			Minecard.LOGGER.info(
-				"Config: roomDecks={} insurance={} surrender={} soft17={}",
-				roomDecks, insuranceEnabled, surrenderEnabled, dealerHitsSoft17
+				"Config: roomDecks={} insurance={} surrender={} soft17={} packHost={} packPort={}",
+				roomDecks, insuranceEnabled, surrenderEnabled, dealerHitsSoft17,
+				packHost.isBlank() ? "(default)" : packHost, packPort
 			);
 		} catch (Exception e) {
 			Minecard.LOGGER.error("Failed to load minecard.json — using defaults", e);
@@ -77,6 +87,8 @@ public final class MinecardConfig {
 		root.addProperty("historyRetentionDays", historyRetentionDays);
 		root.addProperty("defaultBet", defaultBet);
 		root.addProperty("startingBalance", startingBalance);
+		root.addProperty("packHost", packHost);
+		root.addProperty("packPort", packPort);
 		JsonObject bj = new JsonObject();
 		bj.addProperty("soloDecks", soloDecks);
 		bj.addProperty("decks", roomDecks);

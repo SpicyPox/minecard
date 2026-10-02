@@ -6,6 +6,7 @@
 	"minecard.menu.bank_deposit": "Deposit to bank",
 	"minecard.menu.bank_withdraw": "Withdraw from bank",
 	"minecard.menu.create_room": "Create room",
+	"minecard.menu.pack": "Download card pack",
 	"minecard.menu.join_list": "Public rooms",
 	"minecard.menu.join_code": "Join by room code",
 	"minecard.menu.room_code": "Room code",
@@ -179,5 +180,7 @@
 	"minecard.bj.leave": "Leave",
 	"minecard.bj.leave_away": "Table minimized — round saved. Timer continues below. Timeout forfeits the bet.",
 	"minecard.bj.emergency_timeout": "Time expired while away — bet forfeited.",
-	"minecard.pack.prompt": "Optional Minecard pack — real card faces in dialogs. Decline keeps vanilla text fallback."
+	"minecard.pack.prompt": "Optional Minecard pack — real card faces in dialogs. Decline keeps vanilla text fallback.",
+	"minecard.pack.resent": "Card pack offer sent — Accept in the prompt to download.",
+	"minecard.pack.unavailable": "Card pack is not available on this server right now."
 }

@@ -131,24 +131,24 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 - Client vanilla không cài mod. Hình lá nằm trong resource pack của server: mỗi quân là một glyph font, vẽ trong dialog với `height` GUI ≈36 để vừa một hàng mà vẫn đọc được. Server **mời** pack lúc join, không bắt buộc (từ chối không bị kick). Layout bàn dùng **hàng ngang** (`CardGrid` / `CardLayer`): Poker và Blackjack đều 5 hàng (1 cái/bài chung + 4 người). `/minecard cards [poker|blackjack]` là showcase.
 - **Chọn lá (vanilla):** không click trực tiếp glyph trong `PlainMessage`. Cách làm: `multi_action` — mỗi lá một `ActionButton` (label = glyph), `action` kiểu `custom` + NBT id lá; server nhận `custom_click`. Hoặc `single_option` input (radio/dropdown) rồi nút xác nhận. Cả hai đều protocol vanilla, không cần mod client.
 - **Hiệu ứng lật/phát:** dialog vanilla không có animation 3D. Cách làm: đổi glyph mặt ↔ mặt sau rồi `openDialog` lại theo tick. `/minecard cards loop` demo vòng 5s phát (từng lá úp) → 5s lật ngửa → 5s lật úp → 5s thu bài; `/minecard cards stop` dừng.
-- **Menu:** `/minecard` / `/bj` mở dialog chính (Bank sgui, tạo phòng wizard, ô nhập mã phòng, hồ sơ). Không còn solo BJ trên menu. `/minecard join <id>`; `/pk` showcase poker.
+- **Menu:** `/minecard` / `/bj` mở dialog chính (Bank sgui, tạo phòng wizard, ô nhập mã phòng, tải pack, hồ sơ). Không còn solo BJ trên menu. `/minecard join <id>`; `/minecard pack` / `download`; `/pk` showcase poker.
 - **Tạo phòng:** chọn game → (BJ) chỉnh luật mặc định → chọn số lượng + item cược → kiểm balance rồi tay chính/phụ → broadcast chat mã phòng + link join.
 - **Bank:** GUI chest server-side qua **sgui** (vanilla client). Hai chế độ — **Nạp** (ô trống để staging, bỏ đồ vào rồi bấm Confirm mới cộng ví; đóng/không Confirm thì trả đồ về túi) và **Rút** (hiện đúng stack ví, lấy ra là trừ ví). Menu có 2 nút; trong chest có Compass để chuyển chế độ. Hàng dưới: ◀ / Switch / Confirm / Close / ▶.
 - **Ví:** `WalletSavedData` (world, nhiều item id); escrow balance→túi. SQLite history — [data-and-history.md](data-and-history.md).
 - **Blackjack phòng (MVP):** chủ = nhà cái (không cầm bài); ghế Ready khóa cược; Start khi host đủ quỹ max 3:2; `TableBlackjack` lượt từng người; bài người khác ẩn đến resolve.
-- **Config:** `config/minecard.json` (tạo mặc định lúc load) — decks phòng, insurance (mặc định bật), surrender (mặc định tắt), soft-17, timer.
+- **Config:** `config/minecard.json` (tạo mặc định lúc load) — decks phòng, insurance (mặc định bật), surrender (mặc định tắt), soft-17, timer, `packHost` / `packPort`.
 - **Insurance / surrender:** solo + bàn phòng có phase `INSURANCE` khi cái ngửa Át (`insuranceEnabled`); late surrender solo nếu `surrenderEnabled`. Soft-17 / shoe theo config.
 - **Disconnect phòng:** host thoát → đóng phòng hoàn cược; player lobby → refund; đang chơi → auto-stand.
 - **Persist phòng:** `RoomSavedData` giữ sảnh + escrow qua restart; ván giữa chừng → hoàn cược về ví, phòng về LOBBY (không resume mid-hand).
 - **Hồ sơ:** dialog stats W/L/P/BJ, net theo item, hand gần đây + chi tiết; admin `stats`/`ledger`.
-- Pack gửi lúc vào server. Chủ server bật `require-resource-pack=true` nếu muốn buộc hiện hình. Mod không tự đá người từ chối pack.
+- Pack gửi lúc vào server (tuỳ chọn). Texture nằm trong jar — server tự ghi `config/minecard/minecard-cards.zip` và phục vụ HTTP; **không** copy texture tay. Client remote chỉ tải được nếu `packHost` trong `config/minecard.json` là IP/hostname **mà máy client resolve được** (không để trống/`127.0.0.1` trên server public) và firewall mở `packPort` (mặc định 8765). Skip lúc join → `/minecard pack` hoặc `/minecard download` (nút menu **Tải pack lá bài**) gửi lại lời mời. Chủ server bật `require-resource-pack=true` nếu muốn buộc hiện hình. Mod không tự đá người từ chối pack.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 
 ## Menu, thông tin, ràng buộc
 
 Dialog (không cần mod client):
 
-- Chính: hint/stats → ô mã phòng → Số dư / Vào / Tạo phòng (1 cột); tạm ẩn hồ sơ. Nạp/Rút/Xem số dư trong menu Số dư; xem chỉ đọc + phân trang. Dialog `pause=false` + `after_action=none`.
+- Chính: hint/stats → ô mã phòng → Số dư / Vào / Tạo phòng / Tải pack (1 cột); tạm ẩn hồ sơ. Nạp/Rút/Xem số dư trong menu Số dư; xem chỉ đọc + phân trang. Dialog `pause=false` + `after_action=none`.
 - Tạo phòng (wizard): chọn Blackjack/Poker (Poker báo chưa mở); trang luật BJ (timer, decks, seats, insurance, soft-17, surrender — default từ config); trang cược (số lượng + chọn item từ balance/tay); đủ đồ thì tạo và chat mã + join.
 - Trong ván: từng lá hiện hình đúng quân, điểm, nút Hit / Stand / Double / Split / Insurance / Surrender đúng lúc luật cho phép, thời gian còn lại.
 - Hồ sơ: thắng, thua, hòa, lãi ròng **từng loại vật phẩm** (chỉ thống kê, không đổi vật phẩm).
