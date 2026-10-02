@@ -123,6 +123,17 @@ public final class TableReveal {
 		dealerShown = Math.max(0, n);
 	}
 
+	/**
+	 * Logical hit already added to the hand; after {@link #STEP_TICKS},
+	 * {@link #showDealerHit()} reveals one more face.
+	 */
+	public void armDealerHit() {
+		mode = Mode.DEALER_PLAY;
+		cooldown = STEP_TICKS;
+		dealerSettlePause = false;
+		holeFaceUp = true;
+	}
+
 	public void showDealerHit() {
 		dealerShown++;
 	}

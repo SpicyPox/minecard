@@ -178,47 +178,66 @@ public final class TableBlackjack {
 		return turnTicksLeft % 20 == 0;
 	}
 
-	/** Host may hit while under 21 (including soft/hard 17). */
+	/** Host may flip hole, or hit while under 21 (including soft/hard 17). */
 	public boolean dealerCanHit() {
-		return phase == Phase.DEALER_TURN && !dealer.isBust() && dealer.score() < 21;
+		if (phase != Phase.DEALER_TURN || dealer.isBust()) {
+			return false;
+		}
+		if (dealerHitAnimating()) {
+			return false;
+		}
+		// First Hit with hole down only flips — always allowed.
+		if (!reveal.holeFaceUp()) {
+			return true;
+		}
+		return dealer.score() < 21;
 	}
 
-	/** Host may stand any time on dealer turn (after players finished). */
+	/** Host may stand any time on dealer turn (after players finished / anim done). */
 	public boolean dealerCanStand() {
-		return phase == Phase.DEALER_TURN && !dealer.isBust();
+		if (phase != Phase.DEALER_TURN || dealer.isBust()) {
+			return false;
+		}
+		return !dealerHitAnimating();
 	}
 
-	/** Host Hit — flips hole on first action, then draws. */
+	private boolean dealerHitAnimating() {
+		if (reveal.dealerSettlePause()) {
+			return true;
+		}
+		return reveal.mode() == TableReveal.Mode.DEALER_PLAY
+			&& reveal.dealerShown() < dealer.size();
+	}
+
+	/**
+	 * Host Hit: hole face-down → flip only; hole up → draw one card (animated reveal).
+	 */
 	public void dealerHit(UUID actor) {
 		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerCanHit()) {
 			return;
 		}
-		ensureDealerHoleUp();
-		dealer.add(draw());
-		reveal.idleFullyShown(dealer.size(), true);
-		if (dealer.isBust()) {
-			settle();
+		if (!reveal.holeFaceUp()) {
+			reveal.revealHole();
+			turnTicksLeft = turnTicks();
+			markDirty();
 			return;
 		}
+		dealer.add(draw());
+		reveal.armDealerHit();
 		turnTicksLeft = turnTicks();
 		markDirty();
 	}
 
-	/** Host Stand — flips hole on first action, then settles. */
+	/** Host Stand — flips hole if needed, then settles. */
 	public void dealerStand(UUID actor) {
 		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerCanStand()) {
 			return;
 		}
-		ensureDealerHoleUp();
-		reveal.idleFullyShown(dealer.size(), true);
-		settle();
-	}
-
-	private void ensureDealerHoleUp() {
 		if (!reveal.holeFaceUp()) {
 			reveal.revealHole();
-			markDirty();
 		}
+		reveal.idleFullyShown(dealer.size(), true);
+		settle();
 	}
 
 	public void takeInsurance(UUID playerId) {
@@ -554,7 +573,25 @@ public final class TableBlackjack {
 	}
 
 	private boolean tickDealerPlay() {
-		// Manual dealer: host presses Hit/Stand. No auto-draw here.
+		// Manual dealer: only animate the card the host already drew (no auto-hit).
+		if (reveal.dealerSettlePause()) {
+			reveal.clearDealerSettlePause();
+			reveal.idleFullyShown(dealer.size(), true);
+			settle();
+			return true;
+		}
+		if (reveal.dealerShown() < dealer.size()) {
+			reveal.showDealerHit();
+			markDirty();
+			if (reveal.dealerShown() >= dealer.size()) {
+				if (dealer.isBust()) {
+					reveal.beginDealerSettlePause();
+				} else {
+					reveal.idleFullyShown(dealer.size(), true);
+				}
+			}
+			return true;
+		}
 		return false;
 	}
 

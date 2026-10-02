@@ -97,17 +97,32 @@ public final class CardResourcePack {
 	static byte[] createZipBytes() throws IOException {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		try (ZipOutputStream zos = new ZipOutputStream(bos)) {
-			put(zos, "pack.mcmeta", PACK_MCMETA.getBytes(StandardCharsets.UTF_8));
+			put(zos, "pack.mcmeta", textBytes(PACK_MCMETA));
 			for (String asset : ASSET_PATHS) {
 				try (InputStream in = CardResourcePack.class.getClassLoader().getResourceAsStream(asset)) {
 					if (in == null) {
 						throw new IOException("Missing classpath resource: " + asset);
 					}
-					put(zos, asset, in.readAllBytes());
+					byte[] raw = in.readAllBytes();
+					put(zos, asset, isTextAsset(asset) ? normalizeLf(raw) : raw);
 				}
 			}
 		}
 		return bos.toByteArray();
+	}
+
+	private static boolean isTextAsset(String path) {
+		return path.endsWith(".json") || path.endsWith(".mcmeta") || path.endsWith(".txt");
+	}
+
+	/** LF-only so Windows checkout and Linux CI produce the same zip SHA-1. */
+	private static byte[] normalizeLf(byte[] raw) {
+		String s = new String(raw, StandardCharsets.UTF_8).replace("\r\n", "\n").replace("\r", "\n");
+		return s.getBytes(StandardCharsets.UTF_8);
+	}
+
+	private static byte[] textBytes(String text) {
+		return normalizeLf(text.getBytes(StandardCharsets.UTF_8));
 	}
 
 	private static void put(ZipOutputStream zos, String name, byte[] data) throws IOException {

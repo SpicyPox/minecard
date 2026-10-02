@@ -15,6 +15,8 @@ import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -22,8 +24,10 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,9 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Card resource pack delivery.
- * Prefer public HTTPS GitHub Release {@code minecard-cards.zip} when the asset exists.
- * Fallback: local HTTP (browser/manual; in-game Accept for loopback clients).
- * Same fixed pack UUID + stable SHA — spam re-offer does not create new pack slots.
+ * Prefer public HTTPS ({@code packUrl} or GitHub Release) when the remote zip SHA matches local.
+ * Fallback: local HTTP. Loopback clients always Accept via {@code 127.0.0.1} (matching local SHA).
  */
 public final class CardPackOffers {
 	public enum OfferResult {
@@ -50,8 +53,10 @@ public final class CardPackOffers {
 
 	private static CardResourcePack pack;
 	private static PackHttpServer http;
-	/** Preferred URL for clients (GitHub HTTPS, configured, or LAN HTTP). */
+	/** Preferred URL for remote clients (HTTPS host / GitHub / LAN HTTP). */
 	private static String packUrl;
+	/** SHA-1 of bytes at {@link #packUrl} (must match what the client downloads). */
+	private static String packShaForUrl;
 	/** Always-local Accept URL when HTTP server is up. */
 	private static String loopbackHttpUrl;
 	private static boolean autoPush;
@@ -68,20 +73,22 @@ public final class CardPackOffers {
 				pack = CardResourcePack.build();
 				http = startHttp(pack);
 				loopbackHttpUrl = "http://127.0.0.1:" + http.port() + "/minecard-cards.zip";
-				packUrl = resolvePackUrl(server, http.port());
+				ResolvedPack resolved = resolvePack(server, http.port(), pack.sha1Hex());
+				packUrl = resolved.url();
+				packShaForUrl = resolved.sha1Hex();
 				autoPush = canAutoPush(packUrl);
 				Minecard.LOGGER.info(
 					"Card pack URL for clients: {} (autoPush={}, id={}, sha1={})",
 					packUrl,
 					autoPush,
 					pack.id(),
-					pack.sha1Hex()
+					packShaForUrl
 				);
 				if (!autoPush) {
 					Minecard.LOGGER.warn(
 						"In-game pack Accept needs HTTPS or localhost. Remote players use the chat "
 							+ "download link (browser) then enable the pack in Options → Resource Packs. "
-							+ "Or set packUrl in config/minecard.json to a public HTTPS URL. "
+							+ "Or set packUrl in config/minecard.json to any public HTTPS zip. "
 							+ "Local clients still get Accept via {}.",
 						loopbackHttpUrl
 					);
@@ -107,23 +114,98 @@ public final class CardPackOffers {
 		});
 	}
 
+	record ResolvedPack(String url, String sha1Hex) {
+	}
+
 	/**
-	 * Config {@code packUrl} → reachable GitHub Release HTTPS → local HTTP fallback.
+	 * Config {@code packUrl} → GitHub Release HTTPS (SHA must match local) → local HTTP.
+	 * Any public HTTPS host works via {@code packUrl} in {@code config/minecard.json}.
 	 */
-	static String resolvePackUrl(MinecraftServer server, int port) {
+	static ResolvedPack resolvePack(MinecraftServer server, int port, String localSha) {
 		String configured = MinecardConfig.packUrl;
 		if (configured != null && !configured.isBlank()) {
-			return configured.trim();
+			return resolveHttpsOrFallback(configured.trim(), server, port, localSha, "config packUrl");
 		}
 		String gh = githubReleasePackUrl();
 		if (gh != null) {
-			if (isUrlReachable(gh)) {
-				return gh;
+			ResolvedPack remote = resolveHttpsOrFallback(gh, server, port, localSha, "GitHub release");
+			if (canAutoPush(remote.url())) {
+				return remote;
 			}
-			Minecard.LOGGER.warn("GitHub pack not reachable ({}), falling back to local HTTP", gh);
 		}
+		return localHttpPack(server, port, localSha);
+	}
+
+	/** @deprecated use {@link #resolvePack} */
+	@Deprecated
+	static String resolvePackUrl(MinecraftServer server, int port) {
+		return resolvePack(server, port, "unused").url();
+	}
+
+	private static ResolvedPack localHttpPack(MinecraftServer server, int port, String localSha) {
 		String host = resolveHost(server);
-		return "http://" + host + ":" + port + "/minecard-cards.zip";
+		return new ResolvedPack("http://" + host + ":" + port + "/minecard-cards.zip", localSha);
+	}
+
+	/**
+	 * Use remote HTTPS only when downloadable and SHA-1 matches the zip this server built.
+	 * Mismatch (e.g. old release) → local HTTP so Accept hash never lies.
+	 */
+	private static ResolvedPack resolveHttpsOrFallback(
+		String url,
+		MinecraftServer server,
+		int port,
+		String localSha,
+		String label
+	) {
+		Optional<String> remoteSha = fetchRemoteSha1(url);
+		if (remoteSha.isEmpty()) {
+			Minecard.LOGGER.warn("{} not reachable ({}), falling back to local HTTP", label, url);
+			return localHttpPack(server, port, localSha);
+		}
+		if (!remoteSha.get().equalsIgnoreCase(localSha)) {
+			Minecard.LOGGER.warn(
+				"{} SHA mismatch (remote={} local={}) — falling back to local HTTP. "
+					+ "Re-publish minecard-cards.zip or set packUrl to a host with the current zip.",
+				label,
+				remoteSha.get(),
+				localSha
+			);
+			return localHttpPack(server, port, localSha);
+		}
+		return new ResolvedPack(url, localSha);
+	}
+
+	static Optional<String> fetchRemoteSha1(String url) {
+		try {
+			byte[] bytes = downloadBytes(url);
+			if (bytes == null || bytes.length == 0) {
+				return Optional.empty();
+			}
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			return Optional.of(HexFormat.of().formatHex(digest.digest(bytes)));
+		} catch (Exception e) {
+			Minecard.LOGGER.debug("Pack download/sha failed for {}: {}", url, e.toString());
+			return Optional.empty();
+		}
+	}
+
+	private static byte[] downloadBytes(String url) throws Exception {
+		HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+		conn.setInstanceFollowRedirects(true);
+		conn.setRequestMethod("GET");
+		conn.setConnectTimeout(8000);
+		conn.setReadTimeout(15000);
+		conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
+		try (InputStream in = conn.getInputStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+			if (conn.getResponseCode() < 200 || conn.getResponseCode() >= 400) {
+				return null;
+			}
+			in.transferTo(bos);
+			return bos.toByteArray();
+		} finally {
+			conn.disconnect();
+		}
 	}
 
 	public static String githubReleasePackUrl() {
@@ -322,14 +404,18 @@ public final class CardPackOffers {
 		if (pack == null || packUrl == null) {
 			return OfferResult.UNAVAILABLE;
 		}
+		// Local clients: always 127.0.0.1 + local SHA (avoids GitHub SHA mismatch / redirect quirks).
 		String pushUrl = null;
-		if (canAutoPush(packUrl)) {
-			pushUrl = packUrl;
-		} else if (isLoopbackPlayer(player) && loopbackHttpUrl != null) {
+		String pushSha = pack.sha1Hex();
+		if (isLoopbackPlayer(player) && loopbackHttpUrl != null) {
 			pushUrl = loopbackHttpUrl;
+			pushSha = pack.sha1Hex();
+		} else if (canAutoPush(packUrl)) {
+			pushUrl = packUrl;
+			pushSha = packShaForUrl != null ? packShaForUrl : pack.sha1Hex();
 		}
 
-		String fingerprint = pack.sha1Hex() + "|" + (pushUrl != null ? pushUrl : "manual:" + packUrl);
+		String fingerprint = pushSha + "|" + (pushUrl != null ? pushUrl : "manual:" + packUrl);
 		UUID id = player.getUUID();
 		long now = System.currentTimeMillis();
 		Long last = LAST_OFFER_MS.get(id);
@@ -346,7 +432,7 @@ public final class CardPackOffers {
 		LAST_OFFER_FP.put(id, fingerprint);
 
 		if (pushUrl != null) {
-			pushPack(player, pushUrl);
+			pushPack(player, pushUrl, pushSha);
 			return OfferResult.PUSHED;
 		}
 		sendManualGuide(player);
@@ -354,16 +440,17 @@ public final class CardPackOffers {
 	}
 
 	/** @deprecated prefer {@link #offerOrGuide(ServerPlayer)} */
+	@Deprecated
 	public static boolean offer(ServerPlayer player) {
 		return offerOrGuide(player) != OfferResult.UNAVAILABLE;
 	}
 
-	private static void pushPack(ServerPlayer player, String url) {
+	private static void pushPack(ServerPlayer player, String url, String sha1Hex) {
 		// Fixed CardResourcePack.PACK_ID — vanilla replaces the same server-pack slot, does not stack copies.
 		player.connection.send(new ClientboundResourcePackPushPacket(
 			pack.id(),
 			url,
-			pack.sha1Hex(),
+			sha1Hex,
 			false,
 			Optional.of(Component.translatable("minecard.pack.prompt"))
 		));
