@@ -75,7 +75,26 @@ public final class CardResourcePack {
 		return PACK_ID;
 	}
 
-	private static byte[] createZipBytes() throws IOException {
+	/**
+	 * CLI: {@code java -cp minecard.jar com.spicypox.minecard.pack.CardResourcePack out.zip}
+	 * Writes the same zip the live server offers (for HTTPS hosting on GitHub Releases).
+	 */
+	public static void main(String[] args) throws Exception {
+		if (args.length < 1) {
+			System.err.println("Usage: CardResourcePack <out.zip>");
+			System.exit(1);
+		}
+		byte[] zip = createZipBytes();
+		Path out = Path.of(args[0]);
+		Path parent = out.toAbsolutePath().getParent();
+		if (parent != null) {
+			Files.createDirectories(parent);
+		}
+		Files.write(out, zip);
+		System.out.println(sha1Hex(zip));
+	}
+
+	static byte[] createZipBytes() throws IOException {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		try (ZipOutputStream zos = new ZipOutputStream(bos)) {
 			put(zos, "pack.mcmeta", PACK_MCMETA.getBytes(StandardCharsets.UTF_8));

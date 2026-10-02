@@ -40,13 +40,20 @@ jobs:
           mkdir -p release-assets
           # Mod jar only (skip sources / javadoc).
           shopt -s nullglob
+          JAR=""
           for f in build/libs/minecard-*.jar; do
             base=$(basename "$f")
             if [[ "$base" != *-sources.jar && "$base" != *-javadoc.jar ]]; then
               cp "$f" release-assets/
+              JAR="$f"
               echo "asset=$base"
             fi
           done
+          # Same zip the server builds — host on HTTPS so vanilla remote clients can download.
+          if [[ -n "$JAR" ]]; then
+            java -cp "$JAR" com.spicypox.minecard.pack.CardResourcePack release-assets/minecard-cards.zip
+            echo "sha1=$(sha1sum release-assets/minecard-cards.zip | awk '{print $1}')"
+          fi
           ls -la release-assets/
 
       - name: create GitHub release

@@ -27,9 +27,14 @@ public final class MinecardConfig {
 	public static int historyRetentionDays = 90;
 	public static long defaultBet = 10L;
 	public static long startingBalance = 128L;
-	/** Hostname/IP clients use to download the card pack; empty → system property → 127.0.0.1. */
+	/**
+	 * Hostname/IP for local HTTP pack server. Empty → {@code server-ip} / auto-detect / 127.0.0.1.
+	 * Remote clients need HTTPS — prefer {@link #packUrl} or leave both empty to use GitHub Release.
+	 */
 	public static String packHost = "";
 	public static int packPort = 8765;
+	/** Full pack URL override (use HTTPS for VPS). Empty → auto GitHub release when host is remote. */
+	public static String packUrl = "";
 
 	private MinecardConfig() {
 	}
@@ -59,6 +64,9 @@ public final class MinecardConfig {
 				if (root.has("packPort")) {
 					packPort = root.get("packPort").getAsInt();
 				}
+				if (root.has("packUrl")) {
+					packUrl = root.get("packUrl").getAsString();
+				}
 				if (root.has("blackjack")) {
 					JsonObject bj = root.getAsJsonObject("blackjack");
 					soloDecks = getInt(bj, "soloDecks", soloDecks);
@@ -72,9 +80,11 @@ public final class MinecardConfig {
 			}
 			com.spicypox.minecard.wallet.WalletConstants.syncFromConfig(startingBalance, defaultBet);
 			Minecard.LOGGER.info(
-				"Config: roomDecks={} insurance={} surrender={} soft17={} packHost={} packPort={}",
+				"Config: roomDecks={} insurance={} surrender={} soft17={} packHost={} packPort={} packUrl={}",
 				roomDecks, insuranceEnabled, surrenderEnabled, dealerHitsSoft17,
-				packHost.isBlank() ? "(default)" : packHost, packPort
+				packHost.isBlank() ? "(auto)" : packHost,
+				packPort,
+				packUrl.isBlank() ? "(auto)" : packUrl
 			);
 		} catch (Exception e) {
 			Minecard.LOGGER.error("Failed to load minecard.json — using defaults", e);
@@ -89,6 +99,7 @@ public final class MinecardConfig {
 		root.addProperty("startingBalance", startingBalance);
 		root.addProperty("packHost", packHost);
 		root.addProperty("packPort", packPort);
+		root.addProperty("packUrl", packUrl);
 		JsonObject bj = new JsonObject();
 		bj.addProperty("soloDecks", soloDecks);
 		bj.addProperty("decks", roomDecks);
