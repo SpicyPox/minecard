@@ -26,4 +26,34 @@ class CardPackOffersTest {
 		assertTrue(urls.get(1).contains("raw.githubusercontent.com"));
 		assertTrue(urls.stream().noneMatch(u -> u.contains("releases/download")));
 	}
+
+	@Test
+	void normalizePackUrlConvertsGoogleDriveShareLinks() {
+		assertEquals(
+			"https://drive.google.com/uc?export=download&id=1AbC_xYz-123",
+			CardPackOffers.normalizePackUrl(
+				"https://drive.google.com/file/d/1AbC_xYz-123/view?usp=sharing"
+			)
+		);
+		assertEquals(
+			"https://drive.google.com/uc?export=download&id=1AbC_xYz-123",
+			CardPackOffers.normalizePackUrl("https://drive.google.com/open?id=1AbC_xYz-123")
+		);
+		assertEquals(
+			"https://drive.google.com/uc?export=download&id=1AbC_xYz-123",
+			CardPackOffers.normalizePackUrl(
+				"https://drive.google.com/uc?export=download&id=1AbC_xYz-123"
+			)
+		);
+		assertEquals(
+			"https://cdn.example.com/minecard-cards.zip",
+			CardPackOffers.normalizePackUrl("https://cdn.example.com/minecard-cards.zip")
+		);
+	}
+
+	@Test
+	void looksLikeZipDetectsPkHeader() {
+		assertTrue(CardPackOffers.looksLikeZip(new byte[]{0x50, 0x4B, 0x03, 0x04, 0x00}));
+		assertFalse(CardPackOffers.looksLikeZip("<html>".getBytes()));
+	}
 }

@@ -183,12 +183,12 @@
 	"minecard.bj.leave": "Leave",
 	"minecard.bj.leave_away": "Table minimized — round saved. Timer continues below. Timeout forfeits the bet.",
 	"minecard.bj.emergency_timeout": "Time expired while away — bet forfeited.",
-	"minecard.pack.prompt": "Optional Minecard pack — real card faces in dialogs. Decline keeps vanilla text fallback.",
-	"minecard.pack.resent": "Card pack offer sent — Accept in the prompt to download.",
-	"minecard.pack.cooldown": "Pack already offered — wait %s s (same pack is reused, not downloaded again as a new copy).",
-	"minecard.pack.unavailable": "Card pack is not available on this server right now.",
-	"minecard.pack.manual_hint": "Card faces pack (manual): click the link (opens browser) → save the zip into .minecraft/resourcepacks → Options → Resource Packs → enable Minecard → reconnect.",
+	"minecard.pack.prompt": "Optional Minecard pack — shows real card faces in game menus. You can decline and still play.",
+	"minecard.pack.resent": "Pack invite sent — press Accept in the popup to download.",
+	"minecard.pack.cooldown": "Please wait %s seconds before requesting the pack again.",
+	"minecard.pack.unavailable": "The card pack is not available right now. Try again later.",
+	"minecard.pack.manual_hint": "To install card faces: open the link below → save the zip → put it in .minecraft/resourcepacks → Options → Resource Packs → enable Minecard → rejoin the server.",
 	"minecard.pack.manual_click": "[Download Minecard card pack]",
-	"minecard.pack.manual_firewall": "If the link fails, ask the host to open TCP %s on the VPS firewall.",
-	"minecard.pack.http_blocked": "This server has no direct HTTPS pack URL — Minecraft cannot Accept HTTP on a public IP. Use the browser link below (or ask the host to set packUrl / publish pack/ via release)."
+	"minecard.pack.manual_firewall": "If the download fails, ask the server host for help.",
+	"minecard.pack.http_blocked": "Automatic pack download is not available on this server. Use the download link below instead."
 }

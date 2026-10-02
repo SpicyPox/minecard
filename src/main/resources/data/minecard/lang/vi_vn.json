@@ -183,12 +183,12 @@
 	"minecard.bj.leave": "Rời bàn",
 	"minecard.bj.leave_away": "Đã thu gọn bàn — ván được lưu. Timer chạy bên dưới. Hết giờ = mất cửa.",
 	"minecard.bj.emergency_timeout": "Hết giờ khi đang rời bàn — mất cửa.",
-	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hình lá thật trên dialog. Từ chối vẫn vào được, không kick.",
-	"minecard.pack.resent": "Đã gửi lời mời pack — Accept để tải (cùng một pack, không tạo bản mới).",
-	"minecard.pack.cooldown": "Đã gửi pack — đợi %s giây (cùng UUID/SHA, không tải thêm bản mới).",
-	"minecard.pack.unavailable": "Pack lá bài hiện không sẵn trên server này.",
-	"minecard.pack.manual_hint": "Pack lá bài (cài tay): bấm link (mở trình duyệt) → lưu zip vào .minecraft/resourcepacks → Options → Resource Packs → bật Minecard → vào lại server.",
+	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hiện hình lá bài thật trong menu. Từ chối vẫn chơi bình thường.",
+	"minecard.pack.resent": "Đã gửi lời mời pack — bấm Accept trên hộp thoại để tải.",
+	"minecard.pack.cooldown": "Vui lòng đợi %s giây rồi mới yêu cầu pack lại.",
+	"minecard.pack.unavailable": "Pack lá bài tạm chưa sẵn. Thử lại sau.",
+	"minecard.pack.manual_hint": "Cài hình lá bài: bấm link bên dưới → lưu file zip → bỏ vào .minecraft/resourcepacks → Options → Resource Packs → bật Minecard → vào lại server.",
 	"minecard.pack.manual_click": "[Tải pack lá bài Minecard]",
-	"minecard.pack.manual_firewall": "Nếu link lỗi, nhờ chủ server mở firewall TCP %s trên VPS.",
-	"minecard.pack.http_blocked": "Server chưa có URL HTTPS trực tiếp — Minecraft không Accept được HTTP trên IP công khai. Dùng link trình duyệt bên dưới (hoặc nhờ host set packUrl / release kèm pack/)."
+	"minecard.pack.manual_firewall": "Nếu tải không được, hãy nhờ chủ server hỗ trợ.",
+	"minecard.pack.http_blocked": "Server này chưa tải pack tự động được. Hãy dùng link tải bên dưới."
 }

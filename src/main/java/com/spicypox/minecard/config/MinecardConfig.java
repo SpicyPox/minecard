@@ -36,10 +36,9 @@ public final class MinecardConfig {
 	public static String packHost = "";
 	public static int packPort = 8765;
 	/**
-	 * Optional <b>direct</b> HTTPS URL of {@code minecard-cards.zip} (HTTP 200, no redirect).
-	 * GitHub {@code releases/download} redirects to expiring S3 — do not use for Accept.
-	 * Prefer jsDelivr / R2 / Pages / any raw zip host. Empty → probe CDN mirrors of
-	 * {@code pack/minecard-cards.zip} for this mod version, else VPS HTTP (browser only).
+	 * Highest-priority pack URL for in-game Accept. HTTPS only.
+	 * Google Drive share or {@code uc?export=download&id=...} (Anyone with the link, zip &lt; ~100MB).
+	 * Also R2/Pages/jsDelivr. Empty → CDN mirrors of {@code pack/minecard-cards.zip}, else VPS HTTP.
 	 */
 	public static String packUrl = "";
 

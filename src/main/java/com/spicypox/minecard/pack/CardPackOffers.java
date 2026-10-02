@@ -33,15 +33,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Card resource pack delivery for vanilla clients.
  * <p>
- * In-game Accept requires a <b>direct HTTPS</b> URL (HTTP 200, no redirect). GitHub
- * {@code releases/download/...} 302s to short-lived S3 URLs — that breaks Minecraft on
- * public/Ubuntu servers even when the browser works. Prefer jsDelivr / raw.githubusercontent
- * hosting of {@code pack/minecard-cards.zip}, or config {@code packUrl}.
- * Local HTTP on the VPS is for browser/manual install only.
+ * Priority: {@code packUrl} (Google Drive / any HTTPS host) → jsDelivr/raw CDN → VPS HTTP
+ * (browser/manual only). GitHub {@code releases/download} is never used for Accept (302 → S3).
+ * Google Drive share links are normalized to {@code uc?export=download&id=...}.
  */
 public final class CardPackOffers {
 	public enum OfferResult {
@@ -55,6 +55,15 @@ public final class CardPackOffers {
 	private static final String GITHUB_OWNER_REPO = "SpicyPox/minecard";
 	/** Re-offer cooldown for /minecard pack and menu (same content fingerprint). */
 	private static final long OFFER_COOLDOWN_MS = 10_000L;
+	private static final Pattern DRIVE_FILE_D = Pattern.compile(
+		"https?://(?:drive|docs)\\.google\\.com/file/d/([a-zA-Z0-9_-]+)"
+	);
+	private static final Pattern DRIVE_OPEN_ID = Pattern.compile(
+		"https?://(?:drive|docs)\\.google\\.com/open\\?id=([a-zA-Z0-9_-]+)"
+	);
+	private static final Pattern DRIVE_UC_ID = Pattern.compile(
+		"[?&]id=([a-zA-Z0-9_-]+)"
+	);
 
 	private static CardResourcePack pack;
 	private static PackHttpServer http;
@@ -125,17 +134,20 @@ public final class CardPackOffers {
 	}
 
 	/**
-	 * Config {@code packUrl} → direct CDN HTTPS (jsDelivr / raw) → local HTTP manual fallback.
+	 * {@code packUrl} (Drive/HTTPS) → CDN jsDelivr/raw → VPS HTTP (manual).
 	 * Never auto-selects GitHub {@code releases/download} (302 → expiring S3).
 	 */
 	static ResolvedPack resolvePack(MinecraftServer server, int port, String localSha) {
 		String configured = MinecardConfig.packUrl;
 		if (configured != null && !configured.isBlank()) {
-			Optional<ResolvedPack> cfg = tryDirectHttps(configured.trim(), localSha, "config packUrl");
+			Optional<ResolvedPack> cfg = tryUserPackUrl(configured.trim(), localSha);
 			if (cfg.isPresent()) {
 				return cfg.get();
 			}
-			Minecard.LOGGER.warn("config packUrl unusable for in-game Accept; trying CDN mirrors");
+			Minecard.LOGGER.warn(
+				"config packUrl unusable for in-game Accept (need public direct zip HTTPS; "
+					+ "Drive: Anyone with the link + file under ~100MB). Trying CDN mirrors…"
+			);
 		}
 		String ver = modVersion();
 		if (ver != null) {
@@ -147,12 +159,122 @@ public final class CardPackOffers {
 			}
 			Minecard.LOGGER.warn(
 				"No direct HTTPS mirror matched local SHA {}. "
-					+ "GitHub releases/download is skipped (302 breaks vanilla). "
 					+ "Falling back to VPS HTTP for browser/manual only.",
 				localSha
 			);
 		}
 		return localHttpPack(server, port, localSha);
+	}
+
+	/**
+	 * Normalize share links and probe with redirect-follow (Drive → googleusercontent).
+	 * Push URL stays the stable normalized link (not the temporary CDN hop).
+	 */
+	static Optional<ResolvedPack> tryUserPackUrl(String rawUrl, String localSha) {
+		String url = normalizePackUrl(rawUrl);
+		if (!canAutoPush(url)) {
+			Minecard.LOGGER.warn("packUrl is not HTTPS/loopback — skip: {}", url);
+			return Optional.empty();
+		}
+		Optional<byte[]> bytes = downloadZipFollowingRedirects(url);
+		if (bytes.isEmpty()) {
+			Minecard.LOGGER.warn("packUrl did not return a zip (HTML/confirm page?): {}", url);
+			return Optional.empty();
+		}
+		String remoteSha = sha1Hex(bytes.get());
+		if (!remoteSha.equalsIgnoreCase(localSha)) {
+			Minecard.LOGGER.warn(
+				"packUrl SHA mismatch (remote={} local={}) — upload the server's "
+					+ "minecard-cards.zip (same build). url={}",
+				remoteSha,
+				localSha,
+				url
+			);
+			return Optional.empty();
+		}
+		Minecard.LOGGER.info("packUrl OK for in-game Accept: {} (sha={})", url, localSha);
+		return Optional.of(new ResolvedPack(url, localSha));
+	}
+
+	/**
+	 * Convert Google Drive /view or /open links to a direct download URL.
+	 * Already-direct {@code uc?export=download&id=} links are left as-is (https normalized).
+	 */
+	static String normalizePackUrl(String raw) {
+		if (raw == null) {
+			return "";
+		}
+		String url = raw.trim();
+		if (url.isEmpty()) {
+			return url;
+		}
+		Matcher file = DRIVE_FILE_D.matcher(url);
+		if (file.find()) {
+			return driveDirectUrl(file.group(1));
+		}
+		Matcher open = DRIVE_OPEN_ID.matcher(url);
+		if (open.find()) {
+			return driveDirectUrl(open.group(1));
+		}
+		if (url.contains("drive.google.com") || url.contains("docs.google.com")) {
+			if (url.contains("export=download") || url.contains("uc?")) {
+				Matcher id = DRIVE_UC_ID.matcher(url);
+				if (id.find()) {
+					return driveDirectUrl(id.group(1));
+				}
+			}
+		}
+		return url;
+	}
+
+	private static String driveDirectUrl(String fileId) {
+		return "https://drive.google.com/uc?export=download&id=" + fileId;
+	}
+
+	private static Optional<byte[]> downloadZipFollowingRedirects(String url) {
+		HttpURLConnection conn = null;
+		try {
+			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+			conn.setInstanceFollowRedirects(true);
+			conn.setRequestMethod("GET");
+			conn.setConnectTimeout(10000);
+			conn.setReadTimeout(20000);
+			conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
+			int code = conn.getResponseCode();
+			if (code < 200 || code >= 400) {
+				return Optional.empty();
+			}
+			try (InputStream in = conn.getInputStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				in.transferTo(bos);
+				byte[] bytes = bos.toByteArray();
+				if (!looksLikeZip(bytes)) {
+					return Optional.empty();
+				}
+				return Optional.of(bytes);
+			}
+		} catch (Exception e) {
+			Minecard.LOGGER.debug("packUrl download failed for {}: {}", url, e.toString());
+			return Optional.empty();
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
+	}
+
+	static boolean looksLikeZip(byte[] bytes) {
+		return bytes != null && bytes.length >= 4
+			&& bytes[0] == 0x50 && bytes[1] == 0x4B
+			&& (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07)
+			&& (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08);
+	}
+
+	private static String sha1Hex(byte[] data) {
+		try {
+			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(data));
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	/** jsDelivr + raw.githubusercontent — both serve repo files with HTTP 200 (no S3 hop). */
@@ -486,9 +608,8 @@ public final class CardPackOffers {
 				.withClickEvent(new ClickEvent.OpenUrl(URI.create(packUrl)))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal(packUrl))));
 		player.sendSystemMessage(link);
-		player.sendSystemMessage(Component.translatable(
-			"minecard.pack.manual_firewall",
-			String.valueOf(http != null ? http.port() : resolvePort())
-		));
+		if (httpOnly) {
+			player.sendSystemMessage(Component.translatable("minecard.pack.manual_firewall"));
+		}
 	}
 }
