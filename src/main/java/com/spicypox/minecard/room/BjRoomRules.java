@@ -13,7 +13,7 @@ public record BjRoomRules(
 ) {
 	public static BjRoomRules defaults() {
 		return new BjRoomRules(
-			Math.max(5, MinecardConfig.turnSeconds),
+			Math.max(0, MinecardConfig.turnSeconds),
 			clamp(MinecardConfig.roomDecks, 1, 8),
 			MinecardConfig.insuranceEnabled,
 			MinecardConfig.dealerHitsSoft17,
@@ -24,7 +24,8 @@ public record BjRoomRules(
 
 	public BjRoomRules sanitized() {
 		return new BjRoomRules(
-			clamp(turnSeconds, 5, 120),
+			// 0 = no countdown; otherwise 5–120s
+			turnSeconds <= 0 ? 0 : clamp(turnSeconds, 5, 120),
 			clamp(decks, 1, 8),
 			insuranceEnabled,
 			dealerHitsSoft17,

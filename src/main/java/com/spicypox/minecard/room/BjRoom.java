@@ -125,7 +125,17 @@ public final class BjRoom {
 	}
 
 	public boolean canJoin() {
-		return phase == Phase.LOBBY && seats.size() < rules.maxPlayers();
+		if (seats.size() >= rules.maxPlayers()) {
+			return false;
+		}
+		if (phase == Phase.LOBBY) {
+			return true;
+		}
+		// Between hands: allow rejoin via chat link while table is resolved (or cleared).
+		if (phase == Phase.PLAYING) {
+			return table == null || table.phase() == TableBlackjack.Phase.RESOLVED;
+		}
+		return false;
 	}
 
 	public boolean join(UUID playerId, String name) {

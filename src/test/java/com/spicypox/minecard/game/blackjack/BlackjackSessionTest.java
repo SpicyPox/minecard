@@ -19,6 +19,8 @@ class BlackjackSessionTest {
 		// Deterministic deal tests: skip insurance branch unless a test enables it.
 		MinecardConfig.insuranceEnabled = false;
 		MinecardConfig.surrenderEnabled = false;
+		// Production default is 0 (no countdown); tests that use the timer need a positive value.
+		MinecardConfig.turnSeconds = 25;
 	}
 
 	private static void advancePastDeal(BlackjackSession session) {

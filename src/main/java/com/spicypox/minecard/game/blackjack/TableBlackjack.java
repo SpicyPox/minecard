@@ -62,8 +62,13 @@ public final class TableBlackjack {
 		beginDeal();
 	}
 
+	/** 0 = no turn countdown (host/players act freely). */
 	private int turnTicks() {
-		return Math.max(5, rules.turnSeconds()) * 20;
+		int sec = rules.turnSeconds();
+		if (sec <= 0) {
+			return 0;
+		}
+		return sec * 20;
 	}
 
 	public String tableId() {
@@ -148,10 +153,11 @@ public final class TableBlackjack {
 	}
 
 	public boolean tickTurnTimer() {
-		if (phase != Phase.PLAYER_TURN && phase != Phase.INSURANCE && phase != Phase.DEALER_TURN) {
+		// Countdown disabled when turnSeconds <= 0.
+		if (turnTicksLeft <= 0) {
 			return false;
 		}
-		if (turnTicksLeft <= 0) {
+		if (phase != Phase.PLAYER_TURN && phase != Phase.INSURANCE && phase != Phase.DEALER_TURN) {
 			return false;
 		}
 		turnTicksLeft--;
@@ -159,7 +165,7 @@ public final class TableBlackjack {
 			if (phase == Phase.INSURANCE) {
 				declineInsurance(activePlayerId());
 			} else if (phase == Phase.DEALER_TURN) {
-				if (dealerShouldHit()) {
+				if (dealerCanHit()) {
 					dealerHit(hostId);
 				} else {
 					dealerStand(hostId);
@@ -172,19 +178,22 @@ public final class TableBlackjack {
 		return turnTicksLeft % 20 == 0;
 	}
 
+	/** Host may hit while under 21 (including soft/hard 17). */
 	public boolean dealerCanHit() {
-		return phase == Phase.DEALER_TURN && dealerShouldHit();
+		return phase == Phase.DEALER_TURN && !dealer.isBust() && dealer.score() < 21;
 	}
 
+	/** Host may stand any time on dealer turn (after players finished). */
 	public boolean dealerCanStand() {
-		return phase == Phase.DEALER_TURN && !dealerShouldHit();
+		return phase == Phase.DEALER_TURN && !dealer.isBust();
 	}
 
-	/** Host presses Hit for the house hand — only legal when rules require a hit. */
+	/** Host Hit — flips hole on first action, then draws. */
 	public void dealerHit(UUID actor) {
-		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerShouldHit()) {
+		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerCanHit()) {
 			return;
 		}
+		ensureDealerHoleUp();
 		dealer.add(draw());
 		reveal.idleFullyShown(dealer.size(), true);
 		if (dealer.isBust()) {
@@ -195,13 +204,21 @@ public final class TableBlackjack {
 		markDirty();
 	}
 
-	/** Host presses Stand for the house hand — only legal when rules require a stand. */
+	/** Host Stand — flips hole on first action, then settles. */
 	public void dealerStand(UUID actor) {
-		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || dealerShouldHit()) {
+		if (phase != Phase.DEALER_TURN || !hostId.equals(actor) || !dealerCanStand()) {
 			return;
 		}
+		ensureDealerHoleUp();
 		reveal.idleFullyShown(dealer.size(), true);
 		settle();
+	}
+
+	private void ensureDealerHoleUp() {
+		if (!reveal.holeFaceUp()) {
+			reveal.revealHole();
+			markDirty();
+		}
 	}
 
 	public void takeInsurance(UUID playerId) {
@@ -486,8 +503,8 @@ public final class TableBlackjack {
 			return;
 		}
 		phase = Phase.DEALER_TURN;
-		// Hole card up; host chooses Hit/Stand according to house rules.
-		reveal.idleFullyShown(Math.max(2, dealer.size()), true);
+		// Keep hole face-down until host presses Hit/Stand.
+		reveal.idleFullyShown(Math.max(2, dealer.size()), false);
 		turnTicksLeft = turnTicks();
 		markDirty();
 	}

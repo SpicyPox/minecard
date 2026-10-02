@@ -145,7 +145,7 @@ public final class CreateRoomDialog {
 					w,
 					Component.translatable("minecard.create.settings.timer"),
 					"options.generic_value",
-					new NumberRangeInput.RangeInfo(5f, 120f, Optional.of((float) r.turnSeconds()), Optional.of(1f))
+					new NumberRangeInput.RangeInfo(0f, 120f, Optional.of((float) r.turnSeconds()), Optional.of(1f))
 				)
 			),
 			new Input(

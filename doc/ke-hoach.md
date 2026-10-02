@@ -89,7 +89,7 @@ flowchart TD
   payout --> leaveSeat[Rời phòng]
 ```
 
-- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server không ăn phí. Hết ván nhà cái bấm Hit/Stand theo luật; người chơi Play again → Confirm (khóa cược) rồi chủ chia bài tiếp — không đá về sảnh.
+- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server **không** thu phí ván — chỉ khóa đúng mức cược (Ready / Play again). Hết lượt người chơi: lỗ cái vẫn úp đến khi nhà cái bấm Hit/Stand. Nhà cái có thể rút ở 17 (soft-17 mặc định bật; nút Hit khi &lt; 21). Không countdown lượt (timer 0). Rời bàn rồi bấm lại link chat vẫn vào lại được nếu phòng còn (sảnh hoặc giữa hai ván). Play again → Confirm → host Deal.
 - Trước khi chia, nhà cái phải đủ trả thắng tối đa của các cửa đang cược (Blackjack 3:2), lấy balance trước rồi tới túi. Thiếu thì cửa đó không được nâng cược.
 - Một người chỉ ở một phòng. Mỗi người tối đa một phòng làm chủ.
 - Công khai: broadcast một dòng chat, hover hiện luật và vật phẩm, click vào ghế trống.

@@ -20,8 +20,10 @@ public final class MinecardConfig {
 	public static int soloDecks = 1;
 	public static int roomDecks = 6;
 	public static int reshuffleBelow = 15;
-	public static int turnSeconds = 25;
-	public static boolean dealerHitsSoft17 = false;
+	/** 0 = no turn countdown in multiplayer/solo. */
+	public static int turnSeconds = 0;
+	/** When true, house may hit soft 17 (also host can always choose Hit under 21). */
+	public static boolean dealerHitsSoft17 = true;
 	public static boolean insuranceEnabled = true;
 	public static boolean surrenderEnabled = false;
 	public static int historyRetentionDays = 90;

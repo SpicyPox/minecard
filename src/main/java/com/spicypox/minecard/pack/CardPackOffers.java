@@ -4,6 +4,7 @@ import com.spicypox.minecard.Minecard;
 import com.spicypox.minecard.config.MinecardConfig;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -25,14 +26,8 @@ import java.util.Optional;
 
 /**
  * Card resource pack delivery.
- * <p>
- * Vanilla clients reject plain HTTP packs from remote hosts, and private GitHub
- * releases are not downloadable by players. For a private repo + VPS we:
- * <ul>
- *   <li>Serve the zip on the VPS HTTP port for <b>browser</b> download</li>
- *   <li>Only auto-push (in-game Accept prompt) when the URL is HTTPS or localhost</li>
- *   <li>Otherwise send a chat link + manual Resource Packs instructions</li>
- * </ul>
+ * Prefer public HTTPS GitHub Release {@code minecard-cards.zip} (repo must be public).
+ * Fallback: VPS HTTP for browser/manual install; in-game Accept only for HTTPS/localhost.
  */
 public final class CardPackOffers {
 	private static CardResourcePack pack;
@@ -74,16 +69,34 @@ public final class CardPackOffers {
 	}
 
 	/**
-	 * Config {@code packUrl} if set; else {@code http://&lt;server-ip|packHost|detected&gt;:port/minecard-cards.zip}.
-	 * Does <b>not</b> auto-use private GitHub releases.
+	 * Config {@code packUrl} → GitHub Release HTTPS → local HTTP fallback.
 	 */
 	static String resolvePackUrl(MinecraftServer server, int port) {
 		String configured = MinecardConfig.packUrl;
 		if (configured != null && !configured.isBlank()) {
 			return configured.trim();
 		}
+		String gh = githubReleasePackUrl();
+		if (gh != null) {
+			return gh;
+		}
 		String host = resolveHost(server);
 		return "http://" + host + ":" + port + "/minecard-cards.zip";
+	}
+
+	public static String githubReleasePackUrl() {
+		try {
+			String ver = FabricLoader.getInstance()
+				.getModContainer(Minecard.MOD_ID)
+				.map(c -> c.getMetadata().getVersion().getFriendlyString())
+				.orElse(null);
+			if (ver == null || ver.isBlank()) {
+				return null;
+			}
+			return "https://github.com/SpicyPox/minecard/releases/download/v" + ver + "/minecard-cards.zip";
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	/**

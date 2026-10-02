@@ -101,6 +101,7 @@ public final class TableBlackjackDialog {
 		if (table.phase() == TableBlackjack.Phase.RESOLVED) {
 			fillResolvedActions(actions, player, room, hostView, w);
 		} else if (hostView && table.phase() == TableBlackjack.Phase.DEALER_TURN) {
+			// Host chooses Hit/Stand; hole stays down until the first press.
 			if (table.dealerCanHit()) {
 				actions.add(btn("minecard.bj.hit", DEALER_HIT, w));
 			}

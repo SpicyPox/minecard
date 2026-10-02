@@ -274,7 +274,13 @@ public final class Rooms {
 		PLAYER_ROOM.put(player.getUUID(), roomId);
 		persist(player.level().getServer());
 		player.sendSystemMessage(Component.translatable("minecard.room.joined", roomId));
-		refreshLobby(room, player.level().getServer());
+		if (room.phase() == BjRoom.Phase.PLAYING && room.table() != null) {
+			// Rejoined between hands — stay on the table UI (Play again / wait for Deal).
+			TableBlackjackDialog.open(player, room, false);
+			refreshTable(room, player.level().getServer());
+		} else {
+			refreshLobby(room, player.level().getServer());
+		}
 	}
 
 	public static void leave(ServerPlayer player) {

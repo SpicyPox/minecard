@@ -35,7 +35,11 @@ public final class BlackjackSession {
 	public static final int STEP_TICKS = TableReveal.STEP_TICKS;
 
 	public static int turnTicks() {
-		return Math.max(5, MinecardConfig.turnSeconds) * 20;
+		int sec = MinecardConfig.turnSeconds;
+		if (sec <= 0) {
+			return 0;
+		}
+		return sec * 20;
 	}
 
 	private final UUID playerId;
