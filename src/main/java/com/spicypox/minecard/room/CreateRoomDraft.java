@@ -19,7 +19,7 @@ public final class CreateRoomDraft {
 	private Game game = Game.BLACKJACK;
 	private BjRoomRules rules = BjRoomRules.defaults();
 	private long betAmount = Math.max(1L, MinecardConfig.defaultBet);
-	private Identifier stakeItem = Identifier.withDefaultNamespace("diamond");
+	private Identifier stakeItem = Identifier.withDefaultNamespace("oak_log");
 
 	private CreateRoomDraft() {
 	}

@@ -26,7 +26,7 @@ public final class MinecardConfig {
 	public static boolean surrenderEnabled = false;
 	public static int historyRetentionDays = 90;
 	public static long defaultBet = 10L;
-	public static long startingBalance = 1_000L;
+	public static long startingBalance = 128L;
 
 	private MinecardConfig() {
 	}

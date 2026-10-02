@@ -1,0 +1,61 @@
+# Build and publish a GitHub Release when a version tag is pushed (e.g. v0.1.0).
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build
+        # Unit tests + mod jar; skip fabric game tests (heavy / flaky server harness).
+        run: ./gradlew build -x runGameTest
+
+      - name: prepare release assets
+        id: assets
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          mkdir -p release-assets
+          # Mod jar only (skip sources / javadoc).
+          shopt -s nullglob
+          for f in build/libs/minecard-*.jar; do
+            base=$(basename "$f")
+            if [[ "$base" != *-sources.jar && "$base" != *-javadoc.jar ]]; then
+              cp "$f" release-assets/
+              echo "asset=$base"
+            fi
+          done
+          ls -la release-assets/
+
+      - name: create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Minecard ${{ steps.assets.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

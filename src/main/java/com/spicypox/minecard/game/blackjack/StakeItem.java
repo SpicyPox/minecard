@@ -16,14 +16,14 @@ import java.util.Optional;
  * Demo stake currency until rooms pick an item from the host's hand.
  */
 public final class StakeItem {
-	public static final Identifier DEFAULT_ID = Identifier.withDefaultNamespace("diamond");
+	public static final Identifier DEFAULT_ID = Identifier.withDefaultNamespace("oak_log");
 
 	private StakeItem() {
 	}
 
 	public static Item item(Identifier id) {
 		Item found = BuiltInRegistries.ITEM.getValue(id);
-		return found == Items.AIR ? Items.DIAMOND : found;
+		return found == Items.AIR ? Items.OAK_LOG : found;
 	}
 
 	public static Component displayName(Identifier id) {
