@@ -57,11 +57,14 @@ class TableBlackjackTest {
 			}
 		}
 		int guard = 0;
-		while (table.phase() == TableBlackjack.Phase.DEALER_TURN && guard++ < 40) {
+		while (table.phase() == TableBlackjack.Phase.DEALER_TURN && guard++ < 200) {
 			if (table.dealerCanHit()) {
 				table.dealerHit(host);
-			} else {
+			} else if (table.dealerCanStand()) {
 				table.dealerStand(host);
+			} else {
+				// Wait for hole-flip / hit reveal animation ticks.
+				table.tick();
 			}
 		}
 		assertEquals(TableBlackjack.Phase.RESOLVED, table.phase());
