@@ -189,5 +189,6 @@
 	"minecard.pack.unavailable": "Card pack is not available on this server right now.",
 	"minecard.pack.manual_hint": "Card faces pack (manual): click the link (opens browser) → save the zip into .minecraft/resourcepacks → Options → Resource Packs → enable Minecard → reconnect.",
 	"minecard.pack.manual_click": "[Download Minecard card pack]",
-	"minecard.pack.manual_firewall": "If the link fails, ask the host to open TCP %s on the VPS firewall."
+	"minecard.pack.manual_firewall": "If the link fails, ask the host to open TCP %s on the VPS firewall.",
+	"minecard.pack.http_blocked": "This server has no direct HTTPS pack URL — Minecraft cannot Accept HTTP on a public IP. Use the browser link below (or ask the host to set packUrl / publish pack/ via release)."
 }

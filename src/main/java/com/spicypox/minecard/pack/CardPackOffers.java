@@ -35,9 +35,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Card resource pack delivery.
- * Prefer public HTTPS ({@code packUrl} or GitHub Release) when the remote zip SHA matches local.
- * Fallback: local HTTP. Loopback clients always Accept via {@code 127.0.0.1} (matching local SHA).
+ * Card resource pack delivery for vanilla clients.
+ * <p>
+ * In-game Accept requires a <b>direct HTTPS</b> URL (HTTP 200, no redirect). GitHub
+ * {@code releases/download/...} 302s to short-lived S3 URLs — that breaks Minecraft on
+ * public/Ubuntu servers even when the browser works. Prefer jsDelivr / raw.githubusercontent
+ * hosting of {@code pack/minecard-cards.zip}, or config {@code packUrl}.
+ * Local HTTP on the VPS is for browser/manual install only.
  */
 public final class CardPackOffers {
 	public enum OfferResult {
@@ -48,12 +52,13 @@ public final class CardPackOffers {
 		COOLDOWN
 	}
 
+	private static final String GITHUB_OWNER_REPO = "SpicyPox/minecard";
 	/** Re-offer cooldown for /minecard pack and menu (same content fingerprint). */
 	private static final long OFFER_COOLDOWN_MS = 10_000L;
 
 	private static CardResourcePack pack;
 	private static PackHttpServer http;
-	/** Preferred URL for remote clients (HTTPS host / GitHub / LAN HTTP). */
+	/** Preferred URL for remote clients (direct HTTPS or LAN HTTP for manual). */
 	private static String packUrl;
 	/** SHA-1 of bytes at {@link #packUrl} (must match what the client downloads). */
 	private static String packShaForUrl;
@@ -86,10 +91,12 @@ public final class CardPackOffers {
 				);
 				if (!autoPush) {
 					Minecard.LOGGER.warn(
-						"In-game pack Accept needs HTTPS or localhost. Remote players use the chat "
-							+ "download link (browser) then enable the pack in Options → Resource Packs. "
-							+ "Or set packUrl in config/minecard.json to any public HTTPS zip. "
-							+ "Local clients still get Accept via {}.",
+						"No direct HTTPS pack URL — vanilla cannot Accept HTTP to a public IP. "
+							+ "Players use the chat browser link (VPS TCP {}). "
+							+ "Fix: commit pack/minecard-cards.zip and release a tag (jsDelivr), "
+							+ "or set packUrl in config/minecard.json to a direct HTTPS zip. "
+							+ "Localhost clients still Accept via {}.",
+						http.port(),
 						loopbackHttpUrl
 					);
 				}
@@ -118,28 +125,138 @@ public final class CardPackOffers {
 	}
 
 	/**
-	 * Config {@code packUrl} → GitHub Release HTTPS (SHA must match local) → local HTTP.
-	 * Any public HTTPS host works via {@code packUrl} in {@code config/minecard.json}.
+	 * Config {@code packUrl} → direct CDN HTTPS (jsDelivr / raw) → local HTTP manual fallback.
+	 * Never auto-selects GitHub {@code releases/download} (302 → expiring S3).
 	 */
 	static ResolvedPack resolvePack(MinecraftServer server, int port, String localSha) {
 		String configured = MinecardConfig.packUrl;
 		if (configured != null && !configured.isBlank()) {
-			return resolveHttpsOrFallback(configured.trim(), server, port, localSha, "config packUrl");
-		}
-		String gh = githubReleasePackUrl();
-		if (gh != null) {
-			ResolvedPack remote = resolveHttpsOrFallback(gh, server, port, localSha, "GitHub release");
-			if (canAutoPush(remote.url())) {
-				return remote;
+			Optional<ResolvedPack> cfg = tryDirectHttps(configured.trim(), localSha, "config packUrl");
+			if (cfg.isPresent()) {
+				return cfg.get();
 			}
+			Minecard.LOGGER.warn("config packUrl unusable for in-game Accept; trying CDN mirrors");
+		}
+		String ver = modVersion();
+		if (ver != null) {
+			for (String url : directHttpsCandidates(ver)) {
+				Optional<ResolvedPack> hit = tryDirectHttps(url, localSha, "CDN " + url);
+				if (hit.isPresent()) {
+					return hit.get();
+				}
+			}
+			Minecard.LOGGER.warn(
+				"No direct HTTPS mirror matched local SHA {}. "
+					+ "GitHub releases/download is skipped (302 breaks vanilla). "
+					+ "Falling back to VPS HTTP for browser/manual only.",
+				localSha
+			);
 		}
 		return localHttpPack(server, port, localSha);
 	}
 
-	/** @deprecated use {@link #resolvePack} */
-	@Deprecated
-	static String resolvePackUrl(MinecraftServer server, int port) {
-		return resolvePack(server, port, "unused").url();
+	/** jsDelivr + raw.githubusercontent — both serve repo files with HTTP 200 (no S3 hop). */
+	static List<String> directHttpsCandidates(String ver) {
+		String tag = ver.startsWith("v") ? ver : "v" + ver;
+		String path = "pack/minecard-cards.zip";
+		return List.of(
+			"https://cdn.jsdelivr.net/gh/" + GITHUB_OWNER_REPO + "@" + tag + "/" + path,
+			"https://raw.githubusercontent.com/" + GITHUB_OWNER_REPO + "/" + tag + "/" + path
+		);
+	}
+
+	static String modVersion() {
+		try {
+			return FabricLoader.getInstance()
+				.getModContainer(Minecard.MOD_ID)
+				.map(c -> c.getMetadata().getVersion().getFriendlyString())
+				.orElse(null);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Accept only HTTP 200 with matching SHA and <b>no redirect</b>.
+	 * Redirecting hosts (GitHub releases/download → signed S3) fail in the Minecraft client.
+	 */
+	static Optional<ResolvedPack> tryDirectHttps(String url, String localSha, String label) {
+		if (!canAutoPush(url)) {
+			Minecard.LOGGER.warn("{} is not HTTPS/loopback — skip for Accept: {}", label, url);
+			return Optional.empty();
+		}
+		Optional<Probe> probe = probeDirect(url);
+		if (probe.isEmpty()) {
+			Minecard.LOGGER.warn("{} not reachable: {}", label, url);
+			return Optional.empty();
+		}
+		Probe p = probe.get();
+		if (p.redirected()) {
+			Minecard.LOGGER.warn(
+				"{} returns HTTP {} redirect — vanilla pack download often fails. Use a direct 200 URL.",
+				label,
+				p.code()
+			);
+			return Optional.empty();
+		}
+		if (p.code() < 200 || p.code() >= 300 || p.sha1Hex() == null) {
+			Minecard.LOGGER.warn("{} bad response code {}: {}", label, p.code(), url);
+			return Optional.empty();
+		}
+		if (!p.sha1Hex().equalsIgnoreCase(localSha)) {
+			Minecard.LOGGER.warn(
+				"{} SHA mismatch (remote={} local={})",
+				label,
+				p.sha1Hex(),
+				localSha
+			);
+			return Optional.empty();
+		}
+		Minecard.LOGGER.info("{} OK for in-game Accept (direct HTTPS, sha={})", label, localSha);
+		return Optional.of(new ResolvedPack(url, localSha));
+	}
+
+	record Probe(int code, boolean redirected, String sha1Hex) {
+	}
+
+	/** GET without following redirects; hash body only on 200. */
+	static Optional<Probe> probeDirect(String url) {
+		HttpURLConnection conn = null;
+		try {
+			conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+			conn.setInstanceFollowRedirects(false);
+			conn.setRequestMethod("GET");
+			conn.setConnectTimeout(8000);
+			conn.setReadTimeout(15000);
+			conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
+			int code = conn.getResponseCode();
+			if (code == HttpURLConnection.HTTP_MOVED_PERM
+				|| code == HttpURLConnection.HTTP_MOVED_TEMP
+				|| code == HttpURLConnection.HTTP_SEE_OTHER
+				|| code == 307
+				|| code == 308) {
+				return Optional.of(new Probe(code, true, null));
+			}
+			if (code < 200 || code >= 300) {
+				return Optional.of(new Probe(code, false, null));
+			}
+			try (InputStream in = conn.getInputStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				in.transferTo(bos);
+				byte[] bytes = bos.toByteArray();
+				if (bytes.length == 0) {
+					return Optional.of(new Probe(code, false, null));
+				}
+				MessageDigest digest = MessageDigest.getInstance("SHA-1");
+				return Optional.of(new Probe(code, false, HexFormat.of().formatHex(digest.digest(bytes))));
+			}
+		} catch (Exception e) {
+			Minecard.LOGGER.debug("Pack probe failed for {}: {}", url, e.toString());
+			return Optional.empty();
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
 	}
 
 	private static ResolvedPack localHttpPack(MinecraftServer server, int port, String localSha) {
@@ -147,113 +264,14 @@ public final class CardPackOffers {
 		return new ResolvedPack("http://" + host + ":" + port + "/minecard-cards.zip", localSha);
 	}
 
-	/**
-	 * Use remote HTTPS only when downloadable and SHA-1 matches the zip this server built.
-	 * Mismatch (e.g. old release) → local HTTP so Accept hash never lies.
-	 */
-	private static ResolvedPack resolveHttpsOrFallback(
-		String url,
-		MinecraftServer server,
-		int port,
-		String localSha,
-		String label
-	) {
-		Optional<String> remoteSha = fetchRemoteSha1(url);
-		if (remoteSha.isEmpty()) {
-			Minecard.LOGGER.warn("{} not reachable ({}), falling back to local HTTP", label, url);
-			return localHttpPack(server, port, localSha);
-		}
-		if (!remoteSha.get().equalsIgnoreCase(localSha)) {
-			Minecard.LOGGER.warn(
-				"{} SHA mismatch (remote={} local={}) — falling back to local HTTP. "
-					+ "Re-publish minecard-cards.zip or set packUrl to a host with the current zip.",
-				label,
-				remoteSha.get(),
-				localSha
-			);
-			return localHttpPack(server, port, localSha);
-		}
-		return new ResolvedPack(url, localSha);
-	}
-
-	static Optional<String> fetchRemoteSha1(String url) {
-		try {
-			byte[] bytes = downloadBytes(url);
-			if (bytes == null || bytes.length == 0) {
-				return Optional.empty();
-			}
-			MessageDigest digest = MessageDigest.getInstance("SHA-1");
-			return Optional.of(HexFormat.of().formatHex(digest.digest(bytes)));
-		} catch (Exception e) {
-			Minecard.LOGGER.debug("Pack download/sha failed for {}: {}", url, e.toString());
-			return Optional.empty();
-		}
-	}
-
-	private static byte[] downloadBytes(String url) throws Exception {
-		HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-		conn.setInstanceFollowRedirects(true);
-		conn.setRequestMethod("GET");
-		conn.setConnectTimeout(8000);
-		conn.setReadTimeout(15000);
-		conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
-		try (InputStream in = conn.getInputStream(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-			if (conn.getResponseCode() < 200 || conn.getResponseCode() >= 400) {
-				return null;
-			}
-			in.transferTo(bos);
-			return bos.toByteArray();
-		} finally {
-			conn.disconnect();
-		}
-	}
-
+	/** @deprecated kept for older call sites / docs */
+	@Deprecated
 	public static String githubReleasePackUrl() {
-		try {
-			String ver = FabricLoader.getInstance()
-				.getModContainer(Minecard.MOD_ID)
-				.map(c -> c.getMetadata().getVersion().getFriendlyString())
-				.orElse(null);
-			if (ver == null || ver.isBlank()) {
-				return null;
-			}
-			return "https://github.com/SpicyPox/minecard/releases/download/v" + ver + "/minecard-cards.zip";
-		} catch (Exception e) {
+		String ver = modVersion();
+		if (ver == null || ver.isBlank()) {
 			return null;
 		}
-	}
-
-	/** HEAD/GET probe — GitHub release assets often 302 then 200. */
-	static boolean isUrlReachable(String url) {
-		if (url == null || url.isBlank()) {
-			return false;
-		}
-		try {
-			int code = httpStatus(url, "HEAD");
-			if (code == HttpURLConnection.HTTP_BAD_METHOD
-				|| code == HttpURLConnection.HTTP_FORBIDDEN
-				|| code == -1) {
-				code = httpStatus(url, "GET");
-			}
-			return code >= 200 && code < 400;
-		} catch (Exception e) {
-			Minecard.LOGGER.debug("Pack URL probe failed for {}: {}", url, e.toString());
-			return false;
-		}
-	}
-
-	private static int httpStatus(String url, String method) throws Exception {
-		HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-		conn.setInstanceFollowRedirects(true);
-		conn.setRequestMethod(method);
-		conn.setConnectTimeout(5000);
-		conn.setReadTimeout(5000);
-		conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
-		try {
-			return conn.getResponseCode();
-		} finally {
-			conn.disconnect();
-		}
+		return "https://github.com/" + GITHUB_OWNER_REPO + "/releases/download/v" + ver + "/minecard-cards.zip";
 	}
 
 	/**
@@ -326,7 +344,7 @@ public final class CardPackOffers {
 		return Optional.empty();
 	}
 
-	/** True when vanilla will accept an in-game ResourcePackPush for this URL. */
+	/** True when vanilla will accept an in-game ResourcePackPush for this URL scheme/host. */
 	static boolean canAutoPush(String url) {
 		if (url == null || url.isBlank()) {
 			return false;
@@ -404,13 +422,13 @@ public final class CardPackOffers {
 		if (pack == null || packUrl == null) {
 			return OfferResult.UNAVAILABLE;
 		}
-		// Local clients: always 127.0.0.1 + local SHA (avoids GitHub SHA mismatch / redirect quirks).
+		// Local clients: always 127.0.0.1 + local SHA.
 		String pushUrl = null;
 		String pushSha = pack.sha1Hex();
 		if (isLoopbackPlayer(player) && loopbackHttpUrl != null) {
 			pushUrl = loopbackHttpUrl;
 			pushSha = pack.sha1Hex();
-		} else if (canAutoPush(packUrl)) {
+		} else if (canAutoPush(packUrl) && autoPush) {
 			pushUrl = packUrl;
 			pushSha = packShaForUrl != null ? packShaForUrl : pack.sha1Hex();
 		}
@@ -446,7 +464,6 @@ public final class CardPackOffers {
 	}
 
 	private static void pushPack(ServerPlayer player, String url, String sha1Hex) {
-		// Fixed CardResourcePack.PACK_ID — vanilla replaces the same server-pack slot, does not stack copies.
 		player.connection.send(new ClientboundResourcePackPushPacket(
 			pack.id(),
 			url,
@@ -457,6 +474,10 @@ public final class CardPackOffers {
 	}
 
 	public static void sendManualGuide(ServerPlayer player) {
+		boolean httpOnly = packUrl != null && packUrl.startsWith("http://") && !canAutoPush(packUrl);
+		if (httpOnly) {
+			player.sendSystemMessage(Component.translatable("minecard.pack.http_blocked"));
+		}
 		player.sendSystemMessage(Component.translatable("minecard.pack.manual_hint"));
 		MutableComponent link = Component.translatable("minecard.pack.manual_click")
 			.withStyle(Style.EMPTY
@@ -465,6 +486,9 @@ public final class CardPackOffers {
 				.withClickEvent(new ClickEvent.OpenUrl(URI.create(packUrl)))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal(packUrl))));
 		player.sendSystemMessage(link);
-		player.sendSystemMessage(Component.translatable("minecard.pack.manual_firewall", String.valueOf(http != null ? http.port() : resolvePort())));
+		player.sendSystemMessage(Component.translatable(
+			"minecard.pack.manual_firewall",
+			String.valueOf(http != null ? http.port() : resolvePort())
+		));
 	}
 }

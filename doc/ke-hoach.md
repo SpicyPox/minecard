@@ -141,7 +141,7 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 - **Disconnect phòng:** host thoát → đóng phòng hoàn cược; player lobby → refund; đang chơi → auto-stand.
 - **Persist phòng:** `RoomSavedData` giữ sảnh + escrow qua restart; ván giữa chừng → hoàn cược về ví, phòng về LOBBY (không resume mid-hand).
 - **Hồ sơ:** dialog stats W/L/P/BJ, net theo item, hand gần đây + chi tiết; admin `stats`/`ledger`.
-- Pack lá bài: texture trong jar, **không** copy tay. Zip text luôn LF + timestamp 0 để SHA ổn định Windows/CI. Ưu tiên `packUrl` hoặc GitHub Release HTTPS **chỉ khi SHA remote = SHA local**; lệch/404 → HTTP local. Client localhost luôn Accept qua `http://127.0.0.1:port` + SHA local. Host khác (R2, Pages, S3, …) được: set `packUrl` = HTTPS tới đúng zip. `/minecard pack` cooldown 10s. Vanilla **không** Accept HTTP remote. Mở firewall TCP `packPort` cho tải tay.
+- Pack lá bài: texture trong jar + file `pack/minecard-cards.zip` trong repo (cho CDN). **Server game IPv4/`25565` không cần HTTPS** — chỉ URL tải zip cần **HTTPS trực tiếp HTTP 200** (vanilla chặn Accept HTTP public IP; GitHub `releases/download` 302 sang S3 tạm → hay fail). Ưu tiên jsDelivr/raw tới `pack/minecard-cards.zip` hoặc `packUrl` (R2/Pages). SHA phải khớp. HTTP trên VPS (`0.0.0.0:packPort`) chỉ tải **trình duyệt**. Localhost Accept `127.0.0.1`. `/minecard pack` cooldown 10s.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 
 ## Menu, thông tin, ràng buộc

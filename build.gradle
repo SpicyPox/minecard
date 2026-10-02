@@ -73,3 +73,16 @@ jar {
 		rename { "${it}_${project.base.archivesName.get()}" }
 	}
 }
+
+/**
+ * Writes pack/minecard-cards.zip (committed for jsDelivr / raw.githubusercontent HTTPS —
+ * GitHub Release asset URLs 302 to short-lived S3 links and break vanilla clients).
+ */
+tasks.register('generateCardPack', JavaExec) {
+	group = 'minecard'
+	description = 'Generate pack/minecard-cards.zip for CDN hosting'
+	dependsOn classes
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'com.spicypox.minecard.pack.CardResourcePack'
+	args = ['pack/minecard-cards.zip']
+}

@@ -189,5 +189,6 @@
 	"minecard.pack.unavailable": "Pack lá bài hiện không sẵn trên server này.",
 	"minecard.pack.manual_hint": "Pack lá bài (cài tay): bấm link (mở trình duyệt) → lưu zip vào .minecraft/resourcepacks → Options → Resource Packs → bật Minecard → vào lại server.",
 	"minecard.pack.manual_click": "[Tải pack lá bài Minecard]",
-	"minecard.pack.manual_firewall": "Nếu link lỗi, nhờ chủ server mở firewall TCP %s trên VPS."
+	"minecard.pack.manual_firewall": "Nếu link lỗi, nhờ chủ server mở firewall TCP %s trên VPS.",
+	"minecard.pack.http_blocked": "Server chưa có URL HTTPS trực tiếp — Minecraft không Accept được HTTP trên IP công khai. Dùng link trình duyệt bên dưới (hoặc nhờ host set packUrl / release kèm pack/)."
 }

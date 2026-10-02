@@ -49,12 +49,22 @@ jobs:
               echo "asset=$base"
             fi
           done
-          # Same zip the server builds — host on HTTPS so vanilla remote clients can download.
+          # Same zip the server builds. Also must match committed pack/ for jsDelivr Accept URLs.
           if [[ -n "$JAR" ]]; then
             java -cp "$JAR" com.spicypox.minecard.pack.CardResourcePack release-assets/minecard-cards.zip
-            echo "sha1=$(sha1sum release-assets/minecard-cards.zip | awk '{print $1}')"
+            sha1sum release-assets/minecard-cards.zip | tee /tmp/cards.sha
+            if [[ -f pack/minecard-cards.zip ]]; then
+              if ! cmp -s pack/minecard-cards.zip release-assets/minecard-cards.zip; then
+                echo "::error::pack/minecard-cards.zip is stale — run ./gradlew generateCardPack and commit before tagging"
+                exit 1
+              fi
+              echo "Committed pack/ matches release zip (jsDelivr-ready)"
+            else
+              echo "::error::Missing pack/minecard-cards.zip in git (required for direct HTTPS CDN Accept)"
+              exit 1
+            fi
           fi
-          ls -la release-assets/
+          ls -la release-assets/ pack/
 
       - name: create GitHub release
         uses: softprops/action-gh-release@v2

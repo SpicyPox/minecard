@@ -656,14 +656,18 @@ public final class Rooms {
 		if (server == null || !room.publicRoom()) {
 			return;
 		}
-		MutableComponent line = Component.translatable(
-			"minecard.room.public_chat",
-			room.hostName(),
-			room.roomId(),
-			StakeItem.amountLine(room.stakeItem(), room.minBet())
-		).withStyle(ChatFormatting.GOLD);
-		MutableComponent code = Component.translatable("minecard.room.public_code", room.roomId())
-			.withStyle(ChatFormatting.YELLOW);
+		// Gray template; highlight host / room code / stake — not one solid gold line.
+		MutableComponent host = Component.literal(room.hostName()).withStyle(ChatFormatting.YELLOW);
+		MutableComponent code = Component.literal(room.roomId())
+			.withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withBold(true));
+		MutableComponent stake = StakeItem.amountLine(room.stakeItem(), room.minBet()).copy()
+			.withStyle(ChatFormatting.GREEN);
+		MutableComponent line = Component.translatable("minecard.room.public_chat", host, code, stake)
+			.withStyle(ChatFormatting.GRAY);
+		MutableComponent codeLabel = Component.translatable(
+			"minecard.room.public_code",
+			Component.literal(room.roomId()).withStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withBold(true))
+		).withStyle(ChatFormatting.GRAY);
 		String cmd = "/minecard join " + room.roomId();
 		MutableComponent join = Component.translatable("minecard.room.click_join")
 			.withStyle(Style.EMPTY
@@ -671,7 +675,7 @@ public final class Rooms {
 				.withClickEvent(new ClickEvent.RunCommand(cmd))
 				.withHoverEvent(new HoverEvent.ShowText(Component.translatable("minecard.room.join_hover"))));
 		server.getPlayerList().broadcastSystemMessage(
-			Component.empty().append(line).append(" ").append(code).append(" ").append(join),
+			Component.empty().append(line).append(" ").append(codeLabel).append(" ").append(join),
 			false
 		);
 	}
