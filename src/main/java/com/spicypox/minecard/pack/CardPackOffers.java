@@ -149,7 +149,8 @@ public final class CardPackOffers {
 		return Optional.empty();
 	}
 
-	static String githubReleasePackUrl() {
+	/** HTTPS GitHub asset for this mod version, or null if unknown. */
+	public static String githubReleasePackUrl() {
 		try {
 			String ver = FabricLoader.getInstance()
 				.getModContainer(Minecard.MOD_ID)
@@ -162,6 +163,14 @@ public final class CardPackOffers {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	/** Best URL to share for manual install (live offer URL, else GitHub release). */
+	public static String manualDownloadUrl() {
+		if (packUrl != null && !packUrl.isBlank()) {
+			return packUrl;
+		}
+		return githubReleasePackUrl();
 	}
 
 	static boolean isLoopbackHost(String host) {

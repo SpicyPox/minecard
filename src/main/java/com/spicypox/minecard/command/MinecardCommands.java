@@ -15,7 +15,12 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class MinecardCommands {
@@ -34,8 +39,12 @@ public final class MinecardCommands {
 				.then(Commands.literal("menu")
 					.executes(MinecardCommands::openMenu))
 				.then(Commands.literal("pack")
+					.then(Commands.literal("link")
+						.executes(MinecardCommands::packLink))
 					.executes(MinecardCommands::offerPack))
 				.then(Commands.literal("download")
+					.then(Commands.literal("link")
+						.executes(MinecardCommands::packLink))
 					.executes(MinecardCommands::offerPack))
 				.then(Commands.literal("join")
 					.then(Commands.argument("room", StringArgumentType.word())
@@ -86,6 +95,25 @@ public final class MinecardCommands {
 		}
 		ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
 		return 0;
+	}
+
+	/** Chat link + steps so players can install the pack manually in Resource Packs. */
+	private static int packLink(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		String url = CardPackOffers.manualDownloadUrl();
+		if (url == null || url.isBlank()) {
+			ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
+			return 0;
+		}
+		player.sendSystemMessage(Component.translatable("minecard.pack.manual_hint"));
+		MutableComponent link = Component.translatable("minecard.pack.manual_click")
+			.withStyle(Style.EMPTY
+				.withColor(ChatFormatting.GREEN)
+				.withUnderlined(true)
+				.withClickEvent(new ClickEvent.OpenUrl(java.net.URI.create(url)))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(url))));
+		player.sendSystemMessage(link);
+		return 1;
 	}
 
 	private static int joinRoom(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

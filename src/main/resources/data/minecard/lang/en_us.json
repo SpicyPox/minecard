@@ -182,5 +182,7 @@
 	"minecard.bj.emergency_timeout": "Time expired while away — bet forfeited.",
 	"minecard.pack.prompt": "Optional Minecard pack — real card faces in dialogs. Decline keeps vanilla text fallback.",
 	"minecard.pack.resent": "Card pack offer sent — Accept in the prompt to download.",
-	"minecard.pack.unavailable": "Card pack is not available on this server right now."
+	"minecard.pack.unavailable": "Card pack is not available on this server right now.",
+	"minecard.pack.manual_hint": "Manual install: download the zip → put it in .minecraft/resourcepacks → Options → Resource Packs → enable Minecard. Then reconnect or /minecard pack.",
+	"minecard.pack.manual_click": "[Download Minecard card pack]"
 }

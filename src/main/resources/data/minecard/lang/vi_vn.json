@@ -182,5 +182,7 @@
 	"minecard.bj.emergency_timeout": "Hết giờ khi đang rời bàn — mất cửa.",
 	"minecard.pack.prompt": "Pack Minecard (tuỳ chọn) — hình lá thật trên dialog. Từ chối vẫn vào được, không kick.",
 	"minecard.pack.resent": "Đã gửi lời mời pack — Accept để tải lại.",
-	"minecard.pack.unavailable": "Pack lá bài hiện không sẵn trên server này."
+	"minecard.pack.unavailable": "Pack lá bài hiện không sẵn trên server này.",
+	"minecard.pack.manual_hint": "Cài tay: tải zip → bỏ vào .minecraft/resourcepacks → Options → Resource Packs → bật Minecard. Vào lại server hoặc /minecard pack.",
+	"minecard.pack.manual_click": "[Tải pack lá bài Minecard]"
 }
