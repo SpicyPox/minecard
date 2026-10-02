@@ -8,6 +8,8 @@ public final class TablePlayer {
 	private final String name;
 	private final PlayerHandSeat seat = new PlayerHandSeat();
 	private boolean dialogAway;
+	/** Kick/disconnect mid-hand — stay in settle as stand/lose, ignore further actions. */
+	private boolean stoodOut;
 	private long insuranceBet;
 	private boolean insuranceDecided;
 
@@ -35,6 +37,14 @@ public final class TablePlayer {
 
 	public void setDialogAway(boolean dialogAway) {
 		this.dialogAway = dialogAway;
+	}
+
+	public boolean stoodOut() {
+		return stoodOut;
+	}
+
+	public void setStoodOut(boolean stoodOut) {
+		this.stoodOut = stoodOut;
 	}
 
 	public long insuranceBet() {

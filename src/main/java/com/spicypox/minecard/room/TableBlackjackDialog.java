@@ -101,7 +101,7 @@ public final class TableBlackjackDialog {
 		if (table.phase() == TableBlackjack.Phase.RESOLVED) {
 			fillResolvedActions(actions, player, room, hostView, w);
 		} else if (hostView && table.phase() == TableBlackjack.Phase.DEALER_TURN) {
-			// Host chooses Hit/Stand; hole stays down until the first press.
+			// Host Hit/Stand; hole stays down until the first press.
 			if (table.dealerCanHit()) {
 				actions.add(btn("minecard.bj.hit", DEALER_HIT, w));
 			}
@@ -111,12 +111,10 @@ public final class TableBlackjackDialog {
 			if (actions.isEmpty()) {
 				actions.add(btn("minecard.bj.wait", WAIT, w));
 			}
-		} else {
-			boolean myIns = !hostView
-				&& table.phase() == TableBlackjack.Phase.INSURANCE
+		} else if (!hostView) {
+			boolean myIns = table.phase() == TableBlackjack.Phase.INSURANCE
 				&& player.getUUID().equals(table.activePlayerId());
-			boolean myTurn = !hostView
-				&& table.phase() == TableBlackjack.Phase.PLAYER_TURN
+			boolean myTurn = table.phase() == TableBlackjack.Phase.PLAYER_TURN
 				&& player.getUUID().equals(table.activePlayerId());
 			if (myIns) {
 				actions.add(btn("minecard.bj.insurance_yes", INSURANCE_YES, w));
@@ -129,6 +127,12 @@ public final class TableBlackjackDialog {
 			} else {
 				actions.add(btn("minecard.bj.wait", WAIT, w));
 			}
+		} else {
+			// Host spectating player turns — wait + kick controls.
+			actions.add(btn("minecard.bj.wait", WAIT, w));
+		}
+		if (hostView) {
+			addHostKickActions(actions, room, w);
 		}
 
 		ActionButton leave = new ActionButton(
@@ -182,6 +186,21 @@ public final class TableBlackjackDialog {
 			case SURRENDER -> "minecard.bj.result.surrender";
 		};
 		return Component.translatable("minecard.table.result_line", tp.name(), Component.translatable(key));
+	}
+
+	private static void addHostKickActions(List<ActionButton> actions, BjRoom room, int w) {
+		for (RoomSeat seat : room.seats()) {
+			actions.add(new ActionButton(
+				new CommonButtonData(
+					Component.translatable("minecard.room.kick_named", seat.displayName()),
+					w
+				),
+				Optional.of(new CustomAll(
+					Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "table/kick/" + seat.playerId()),
+					Optional.empty()
+				))
+			));
+		}
 	}
 
 	private static ActionButton btn(String key, Identifier id, int w) {

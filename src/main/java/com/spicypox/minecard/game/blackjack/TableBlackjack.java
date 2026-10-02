@@ -330,6 +330,45 @@ public final class TableBlackjack {
 		advancePlayer();
 	}
 
+	/**
+	 * Kick / disconnect: finish every unfinished hand for this player (stand),
+	 * decline pending insurance, then advance turn if they were active.
+	 */
+	public void forceStandOut(UUID playerId) {
+		if (phase == Phase.RESOLVED) {
+			return;
+		}
+		boolean wasActive = playerId.equals(activePlayerId());
+		boolean touched = false;
+		for (TablePlayer p : players) {
+			if (!p.playerId().equals(playerId)) {
+				continue;
+			}
+			touched = true;
+			p.setStoodOut(true);
+			p.setInsuranceDecided(true);
+			if (!p.seat().finished()) {
+				p.seat().setFinished(true);
+			}
+		}
+		if (!touched) {
+			return;
+		}
+		if (phase == Phase.INSURANCE && wasActive) {
+			advanceInsurance();
+		} else if (phase == Phase.PLAYER_TURN && wasActive) {
+			advancePlayer();
+		} else if (phase == Phase.PLAYER_TURN && firstUnfinished() < 0) {
+			beginDealer();
+		} else if (phase == Phase.INSURANCE && players.stream()
+			.filter(p -> !p.seat().finished())
+			.allMatch(TablePlayer::insuranceDecided)) {
+			finishInsurancePeek();
+		} else {
+			markDirty();
+		}
+	}
+
 	public void doubleDown(UUID playerId) {
 		if (phase != Phase.PLAYER_TURN || !playerId.equals(activePlayerId())) {
 			return;
@@ -440,6 +479,11 @@ public final class TableBlackjack {
 		reveal.idleFullyShown(Math.min(2, dealer.size()), false);
 		boolean anyPlay = false;
 		for (TablePlayer p : players) {
+			if (p.stoodOut()) {
+				p.setInsuranceDecided(true);
+				p.seat().setFinished(true);
+				continue;
+			}
 			p.setInsuranceDecided(false);
 			p.setInsuranceBet(0L);
 			if (p.seat().hand().isBlackjack()) {

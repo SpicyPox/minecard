@@ -112,6 +112,8 @@ public final class CardResourcePack {
 
 	private static void put(ZipOutputStream zos, String name, byte[] data) throws IOException {
 		ZipEntry entry = new ZipEntry(name);
+		// Fixed timestamp so SHA-1 is stable across restarts (avoids clients re-downloading identical content).
+		entry.setTime(0L);
 		zos.putNextEntry(entry);
 		zos.write(data);
 		zos.closeEntry();

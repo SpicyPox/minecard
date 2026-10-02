@@ -89,7 +89,7 @@ flowchart TD
   payout --> leaveSeat[Rời phòng]
 ```
 
-- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server **không** thu phí ván — chỉ khóa đúng mức cược (Ready / Play again). Hết lượt người chơi: lỗ cái vẫn úp đến khi nhà cái bấm Hit/Stand. Nhà cái có thể rút ở 17 (soft-17 mặc định bật; nút Hit khi &lt; 21). Không countdown lượt (timer 0). Rời bàn rồi bấm lại link chat vẫn vào lại được nếu phòng còn (sảnh hoặc giữa hai ván). Play again → Confirm → host Deal.
+- Chủ phòng là **nhà cái**, không cầm bài. Người khác cược với nhà cái. Server **không** thu phí ván — chỉ khóa đúng mức cược (Ready / Play again). Hết lượt người chơi: lỗ cái vẫn úp đến khi nhà cái bấm Hit/Stand. Nhà cái có thể rút ở 17 (soft-17 mặc định bật; nút Hit khi &lt; 21). Không countdown lượt (timer 0) — tránh reset dialog khiến không scroll được. Nhà cái có nút Hit/Stand (lượt cái) và Kick từng ghế (sảnh + bàn). Kick giữa ván = stand-out như disconnect, không hoàn cược; sảnh/sau resolve thì hoàn escrow. Rời bàn rồi bấm lại link chat vẫn vào lại được nếu phòng còn (sảnh hoặc giữa hai ván). Play again → Confirm → host Deal.
 - Trước khi chia, nhà cái phải đủ trả thắng tối đa của các cửa đang cược (Blackjack 3:2), lấy balance trước rồi tới túi. Thiếu thì cửa đó không được nâng cược.
 - Một người chỉ ở một phòng. Mỗi người tối đa một phòng làm chủ.
 - Công khai: broadcast một dòng chat, hover hiện luật và vật phẩm, click vào ghế trống.
@@ -141,7 +141,7 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 - **Disconnect phòng:** host thoát → đóng phòng hoàn cược; player lobby → refund; đang chơi → auto-stand.
 - **Persist phòng:** `RoomSavedData` giữ sảnh + escrow qua restart; ván giữa chừng → hoàn cược về ví, phòng về LOBBY (không resume mid-hand).
 - **Hồ sơ:** dialog stats W/L/P/BJ, net theo item, hand gần đây + chi tiết; admin `stats`/`ledger`.
-- Pack lá bài: texture trong jar, **không** copy tay. Repo **private** không dùng được GitHub Release cho client. VPS phục vụ zip qua HTTP (`server-ip`:`packPort`, mặc định 8765) để tải **bằng trình duyệt**; vanilla **không** Accept được HTTP remote trong game — join/`/minecard pack` gửi link chat + hướng dẫn bật Resource Packs. Muốn prompt Accept trong game thì set `packUrl` = URL **HTTPS công khai** tự host. Mở firewall TCP `packPort`.
+- Pack lá bài: texture trong jar, **không** copy tay. Ưu tiên GitHub Release HTTPS `minecard-cards.zip` đúng version mod **nếu asset tồn tại** (probe lúc start); thiếu/404 → HTTP local (`packHost`/`packPort`, mặc định 8765). Client localhost vẫn Accept qua `http://127.0.0.1:port`. UUID pack cố định + SHA zip ổn định (timestamp entry = 0); `/minecard pack` cooldown 10s cùng fingerprint — không nhân bản pack trên client. Vanilla **không** Accept HTTP remote — join/`/minecard pack` gửi link chat + hướng dẫn bật Resource Packs. Override: `packUrl` HTTPS công khai. Mở firewall TCP `packPort`.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 
 ## Menu, thông tin, ràng buộc

@@ -15,26 +15,49 @@ import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Card resource pack delivery.
- * Prefer public HTTPS GitHub Release {@code minecard-cards.zip} (repo must be public).
- * Fallback: VPS HTTP for browser/manual install; in-game Accept only for HTTPS/localhost.
+ * Prefer public HTTPS GitHub Release {@code minecard-cards.zip} when the asset exists.
+ * Fallback: local HTTP (browser/manual; in-game Accept for loopback clients).
+ * Same fixed pack UUID + stable SHA — spam re-offer does not create new pack slots.
  */
 public final class CardPackOffers {
+	public enum OfferResult {
+		UNAVAILABLE,
+		PUSHED,
+		MANUAL,
+		/** Same pack already offered recently — no second push (avoids client re-download spam). */
+		COOLDOWN
+	}
+
+	/** Re-offer cooldown for /minecard pack and menu (same content fingerprint). */
+	private static final long OFFER_COOLDOWN_MS = 10_000L;
+
 	private static CardResourcePack pack;
 	private static PackHttpServer http;
-	/** URL advertised to players (browser and/or in-game push). */
+	/** Preferred URL for clients (GitHub HTTPS, configured, or LAN HTTP). */
 	private static String packUrl;
+	/** Always-local Accept URL when HTTP server is up. */
+	private static String loopbackHttpUrl;
 	private static boolean autoPush;
+
+	private static final Map<UUID, Long> LAST_OFFER_MS = new ConcurrentHashMap<>();
+	private static final Map<UUID, String> LAST_OFFER_FP = new ConcurrentHashMap<>();
 
 	private CardPackOffers() {
 	}
@@ -44,15 +67,23 @@ public final class CardPackOffers {
 			try {
 				pack = CardResourcePack.build();
 				http = startHttp(pack);
+				loopbackHttpUrl = "http://127.0.0.1:" + http.port() + "/minecard-cards.zip";
 				packUrl = resolvePackUrl(server, http.port());
 				autoPush = canAutoPush(packUrl);
-				Minecard.LOGGER.info("Card pack URL for clients: {} (autoPush={})", packUrl, autoPush);
+				Minecard.LOGGER.info(
+					"Card pack URL for clients: {} (autoPush={}, id={}, sha1={})",
+					packUrl,
+					autoPush,
+					pack.id(),
+					pack.sha1Hex()
+				);
 				if (!autoPush) {
 					Minecard.LOGGER.warn(
-						"In-game pack Accept is disabled for this URL (vanilla blocks cleartext HTTP to "
-							+ "public IPs; private GitHub releases are not reachable). Players use the chat "
+						"In-game pack Accept needs HTTPS or localhost. Remote players use the chat "
 							+ "download link (browser) then enable the pack in Options → Resource Packs. "
-							+ "Or set packUrl in config/minecard.json to a public HTTPS URL you host."
+							+ "Or set packUrl in config/minecard.json to a public HTTPS URL. "
+							+ "Local clients still get Accept via {}.",
+						loopbackHttpUrl
 					);
 				}
 			} catch (Exception e) {
@@ -64,12 +95,20 @@ public final class CardPackOffers {
 				http.close();
 				http = null;
 			}
+			LAST_OFFER_MS.clear();
+			LAST_OFFER_FP.clear();
 		});
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> offerOrGuide(handler.player));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+			offerOrGuide(handler.player, true));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			UUID id = handler.player.getUUID();
+			LAST_OFFER_MS.remove(id);
+			LAST_OFFER_FP.remove(id);
+		});
 	}
 
 	/**
-	 * Config {@code packUrl} → GitHub Release HTTPS → local HTTP fallback.
+	 * Config {@code packUrl} → reachable GitHub Release HTTPS → local HTTP fallback.
 	 */
 	static String resolvePackUrl(MinecraftServer server, int port) {
 		String configured = MinecardConfig.packUrl;
@@ -78,7 +117,10 @@ public final class CardPackOffers {
 		}
 		String gh = githubReleasePackUrl();
 		if (gh != null) {
-			return gh;
+			if (isUrlReachable(gh)) {
+				return gh;
+			}
+			Minecard.LOGGER.warn("GitHub pack not reachable ({}), falling back to local HTTP", gh);
 		}
 		String host = resolveHost(server);
 		return "http://" + host + ":" + port + "/minecard-cards.zip";
@@ -96,6 +138,39 @@ public final class CardPackOffers {
 			return "https://github.com/SpicyPox/minecard/releases/download/v" + ver + "/minecard-cards.zip";
 		} catch (Exception e) {
 			return null;
+		}
+	}
+
+	/** HEAD/GET probe — GitHub release assets often 302 then 200. */
+	static boolean isUrlReachable(String url) {
+		if (url == null || url.isBlank()) {
+			return false;
+		}
+		try {
+			int code = httpStatus(url, "HEAD");
+			if (code == HttpURLConnection.HTTP_BAD_METHOD
+				|| code == HttpURLConnection.HTTP_FORBIDDEN
+				|| code == -1) {
+				code = httpStatus(url, "GET");
+			}
+			return code >= 200 && code < 400;
+		} catch (Exception e) {
+			Minecard.LOGGER.debug("Pack URL probe failed for {}: {}", url, e.toString());
+			return false;
+		}
+	}
+
+	private static int httpStatus(String url, String method) throws Exception {
+		HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+		conn.setInstanceFollowRedirects(true);
+		conn.setRequestMethod(method);
+		conn.setConnectTimeout(5000);
+		conn.setReadTimeout(5000);
+		conn.setRequestProperty("User-Agent", "MinecardPackProbe/1.0");
+		try {
+			return conn.getResponseCode();
+		} finally {
+			conn.disconnect();
 		}
 	}
 
@@ -189,7 +264,7 @@ public final class CardPackOffers {
 	}
 
 	public static boolean autoPushEnabled() {
-		return autoPush && pack != null && packUrl != null;
+		return pack != null && (autoPush || loopbackHttpUrl != null);
 	}
 
 	/** Browser / chat download URL (VPS HTTP is fine in a normal browser). */
@@ -203,6 +278,18 @@ public final class CardPackOffers {
 		}
 		String h = host.trim().toLowerCase();
 		return "127.0.0.1".equals(h) || "localhost".equals(h) || "::1".equals(h);
+	}
+
+	static boolean isLoopbackPlayer(ServerPlayer player) {
+		try {
+			SocketAddress addr = player.connection.getRemoteAddress();
+			if (addr instanceof InetSocketAddress isa) {
+				InetAddress ip = isa.getAddress();
+				return ip != null && ip.isLoopbackAddress();
+			}
+		} catch (Exception ignored) {
+		}
+		return false;
 	}
 
 	private static PackHttpServer startHttp(CardResourcePack pack) throws Exception {
@@ -222,35 +309,64 @@ public final class CardPackOffers {
 		return packUrl;
 	}
 
+	/** Player-triggered offer ({@code /minecard pack} / menu) — cooldown applies. */
+	public static OfferResult offerOrGuide(ServerPlayer player) {
+		return offerOrGuide(player, false);
+	}
+
 	/**
-	 * In-game Accept prompt when allowed; otherwise chat link for manual install.
-	 * @return true if something useful was sent
+	 * @param fromJoin {@code true} = one offer per connection without cooldown message spam;
+	 *                 still skips identical re-push within the cooldown window.
 	 */
-	public static boolean offerOrGuide(ServerPlayer player) {
+	public static OfferResult offerOrGuide(ServerPlayer player, boolean fromJoin) {
 		if (pack == null || packUrl == null) {
-			return false;
+			return OfferResult.UNAVAILABLE;
 		}
-		if (autoPush) {
-			return pushPack(player);
+		String pushUrl = null;
+		if (canAutoPush(packUrl)) {
+			pushUrl = packUrl;
+		} else if (isLoopbackPlayer(player) && loopbackHttpUrl != null) {
+			pushUrl = loopbackHttpUrl;
+		}
+
+		String fingerprint = pack.sha1Hex() + "|" + (pushUrl != null ? pushUrl : "manual:" + packUrl);
+		UUID id = player.getUUID();
+		long now = System.currentTimeMillis();
+		Long last = LAST_OFFER_MS.get(id);
+		String prevFp = LAST_OFFER_FP.get(id);
+		if (last != null && fingerprint.equals(prevFp) && now - last < OFFER_COOLDOWN_MS) {
+			if (!fromJoin) {
+				long leftSec = Math.max(1L, (OFFER_COOLDOWN_MS - (now - last) + 999L) / 1000L);
+				player.sendSystemMessage(Component.translatable("minecard.pack.cooldown", leftSec));
+			}
+			return OfferResult.COOLDOWN;
+		}
+
+		LAST_OFFER_MS.put(id, now);
+		LAST_OFFER_FP.put(id, fingerprint);
+
+		if (pushUrl != null) {
+			pushPack(player, pushUrl);
+			return OfferResult.PUSHED;
 		}
 		sendManualGuide(player);
-		return true;
+		return OfferResult.MANUAL;
 	}
 
 	/** @deprecated prefer {@link #offerOrGuide(ServerPlayer)} */
 	public static boolean offer(ServerPlayer player) {
-		return offerOrGuide(player);
+		return offerOrGuide(player) != OfferResult.UNAVAILABLE;
 	}
 
-	private static boolean pushPack(ServerPlayer player) {
+	private static void pushPack(ServerPlayer player, String url) {
+		// Fixed CardResourcePack.PACK_ID — vanilla replaces the same server-pack slot, does not stack copies.
 		player.connection.send(new ClientboundResourcePackPushPacket(
 			pack.id(),
-			packUrl,
+			url,
 			pack.sha1Hex(),
 			false,
 			Optional.of(Component.translatable("minecard.pack.prompt"))
 		));
-		return true;
 	}
 
 	public static void sendManualGuide(ServerPlayer player) {

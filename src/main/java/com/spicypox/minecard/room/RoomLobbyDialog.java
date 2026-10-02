@@ -72,6 +72,18 @@ public final class RoomLobbyDialog {
 			actions.add(btn("minecard.room.unready", UNREADY, w));
 		} else {
 			actions.add(btn("minecard.room.start", START, w));
+			for (RoomSeat seat : room.seats()) {
+				actions.add(new ActionButton(
+					new CommonButtonData(
+						Component.translatable("minecard.room.kick_named", seat.displayName()),
+						w
+					),
+					Optional.of(new CustomAll(
+						Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "room/kick/" + seat.playerId()),
+						Optional.empty()
+					))
+				));
+			}
 		}
 
 		ActionButton leave = new ActionButton(

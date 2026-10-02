@@ -75,6 +75,13 @@ public final class DialogClicks {
 			Rooms.hostStart(player);
 			return true;
 		}
+		if (path.startsWith("room/kick/")) {
+			try {
+				Rooms.kick(player, java.util.UUID.fromString(path.substring("room/kick/".length())));
+			} catch (IllegalArgumentException ignored) {
+			}
+			return true;
+		}
 		if (path.equals("room/leave") || path.equals("table/leave")) {
 			Rooms.leave(player);
 			return true;

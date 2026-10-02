@@ -84,14 +84,18 @@ public final class MinecardCommands {
 	/** Re-offer pack Accept (HTTPS/localhost) or send browser download link. */
 	private static int offerPack(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
-		if (!CardPackOffers.offerOrGuide(player)) {
-			ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
-			return 0;
-		}
-		if (CardPackOffers.autoPushEnabled()) {
-			player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
-		}
-		return 1;
+		return switch (CardPackOffers.offerOrGuide(player)) {
+			case UNAVAILABLE -> {
+				ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
+				yield 0;
+			}
+			case COOLDOWN -> 1; // message already sent
+			case PUSHED -> {
+				player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
+				yield 1;
+			}
+			case MANUAL -> 1;
+		};
 	}
 
 	/** Always send chat link + manual Resource Packs steps (browser download). */

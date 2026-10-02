@@ -143,8 +143,8 @@ public final class Rooms {
 				return;
 			}
 			if (room.phase() == BjRoom.Phase.PLAYING && room.table() != null) {
-				// Auto-stand disconnected player's active turn; otherwise leave seat to resolve.
-				room.table().stand(player.getUUID());
+				// Auto-stand all unfinished hands (same path as host kick mid-hand).
+				room.table().forceStandOut(player.getUUID());
 				refreshTable(room, server);
 			}
 		});
@@ -306,6 +306,47 @@ public final class Rooms {
 		refreshLobby(room, player.level().getServer());
 	}
 
+	/** Host removes a seated player. Mid-hand: stand-out like disconnect, no refund (settle keeps stake). */
+	public static void kick(ServerPlayer host, UUID targetId) {
+		roomOf(host.getUUID()).ifPresent(room -> {
+			if (!room.hostId().equals(host.getUUID()) || room.hostId().equals(targetId)) {
+				return;
+			}
+			if (room.seat(targetId).isEmpty()) {
+				return;
+			}
+			MinecraftServer server = host.level().getServer();
+			ServerPlayer target = server != null ? server.getPlayerList().getPlayer(targetId) : null;
+			TableBlackjack table = room.table();
+			boolean midHand = room.phase() == BjRoom.Phase.PLAYING
+				&& table != null
+				&& table.phase() != TableBlackjack.Phase.RESOLVED;
+
+			if (midHand) {
+				table.forceStandOut(targetId);
+			} else {
+				refundSeat(room, targetId, target);
+			}
+			room.leave(targetId);
+			PLAYER_ROOM.remove(targetId);
+			if (target != null) {
+				Dialogs.clear(target);
+				target.sendSystemMessage(Component.translatable("minecard.room.kicked"));
+				MainMenuDialog.open(target);
+			}
+			host.sendSystemMessage(Component.translatable(
+				"minecard.room.kick_ok",
+				target != null ? target.getGameProfile().name() : targetId.toString().substring(0, 8)
+			));
+			persist(server);
+			if (room.phase() == BjRoom.Phase.PLAYING && room.table() != null) {
+				refreshTable(room, server);
+			} else {
+				refreshLobby(room, server);
+			}
+		});
+	}
+
 	public static void setReady(ServerPlayer player, boolean ready) {
 		roomOf(player.getUUID()).ifPresent(room -> {
 			if (room.phase() != BjRoom.Phase.LOBBY) {
@@ -412,6 +453,13 @@ public final class Rooms {
 				}
 				case "leave" -> leave(player);
 				default -> {
+					if (action.startsWith("kick/") && room.hostId().equals(id)) {
+						try {
+							kick(player, UUID.fromString(action.substring("kick/".length())));
+						} catch (IllegalArgumentException ignored) {
+						}
+						return;
+					}
 				}
 			}
 			if (PLAYER_ROOM.containsKey(player.getUUID())) {
