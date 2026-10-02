@@ -113,10 +113,10 @@ public final class MainMenuDialog {
 			}
 			case "join_list" -> Rooms.openPublicList(player);
 			case "pack" -> {
-				if (CardPackOffers.offer(player)) {
-					player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
-				} else {
+				if (!CardPackOffers.offerOrGuide(player)) {
 					player.sendSystemMessage(Component.translatable("minecard.pack.unavailable"));
+				} else if (CardPackOffers.autoPushEnabled()) {
+					player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
 				}
 			}
 			case "profile" -> ProfileDialog.open(player);

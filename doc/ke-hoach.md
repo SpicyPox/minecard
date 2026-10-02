@@ -141,7 +141,7 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 - **Disconnect phòng:** host thoát → đóng phòng hoàn cược; player lobby → refund; đang chơi → auto-stand.
 - **Persist phòng:** `RoomSavedData` giữ sảnh + escrow qua restart; ván giữa chừng → hoàn cược về ví, phòng về LOBBY (không resume mid-hand).
 - **Hồ sơ:** dialog stats W/L/P/BJ, net theo item, hand gần đây + chi tiết; admin `stats`/`ledger`.
-- Pack gửi lúc vào server (tuỳ chọn). Texture nằm trong jar — **không** copy texture tay. `server-ip` trong `server.properties` **không** phải URL pack. Client vanilla **từ chối HTTP** từ IP public; VPS nên để `packUrl` / `packHost` **rỗng** để mod dùng HTTPS GitHub Release (`minecard-cards.zip` đính kèm tag), hoặc set `packUrl` = URL HTTPS tự host. Local HTTP (`packPort` 8765) chỉ ổn cho `127.0.0.1`. Skip lúc join → `/minecard pack`. Mod không đá người từ chối pack.
+- Pack lá bài: texture trong jar, **không** copy tay. Repo **private** không dùng được GitHub Release cho client. VPS phục vụ zip qua HTTP (`server-ip`:`packPort`, mặc định 8765) để tải **bằng trình duyệt**; vanilla **không** Accept được HTTP remote trong game — join/`/minecard pack` gửi link chat + hướng dẫn bật Resource Packs. Muốn prompt Accept trong game thì set `packUrl` = URL **HTTPS công khai** tự host. Mở firewall TCP `packPort`.
 - Bài úp dùng một mặt sau chung. Người chơi không thấy mặt bài của người khác.
 
 ## Menu, thông tin, ràng buộc

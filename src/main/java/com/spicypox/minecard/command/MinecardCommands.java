@@ -15,12 +15,7 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
-import net.minecraft.ChatFormatting;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class MinecardCommands {
@@ -86,18 +81,20 @@ public final class MinecardCommands {
 		return 1;
 	}
 
-	/** Re-offer the optional card resource pack after skip/decline. */
+	/** Re-offer pack Accept (HTTPS/localhost) or send browser download link. */
 	private static int offerPack(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
-		if (CardPackOffers.offer(player)) {
-			player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
-			return 1;
+		if (!CardPackOffers.offerOrGuide(player)) {
+			ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
+			return 0;
 		}
-		ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
-		return 0;
+		if (CardPackOffers.autoPushEnabled()) {
+			player.sendSystemMessage(Component.translatable("minecard.pack.resent"));
+		}
+		return 1;
 	}
 
-	/** Chat link + steps so players can install the pack manually in Resource Packs. */
+	/** Always send chat link + manual Resource Packs steps (browser download). */
 	private static int packLink(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		String url = CardPackOffers.manualDownloadUrl();
@@ -105,14 +102,7 @@ public final class MinecardCommands {
 			ctx.getSource().sendFailure(Component.translatable("minecard.pack.unavailable"));
 			return 0;
 		}
-		player.sendSystemMessage(Component.translatable("minecard.pack.manual_hint"));
-		MutableComponent link = Component.translatable("minecard.pack.manual_click")
-			.withStyle(Style.EMPTY
-				.withColor(ChatFormatting.GREEN)
-				.withUnderlined(true)
-				.withClickEvent(new ClickEvent.OpenUrl(java.net.URI.create(url)))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal(url))));
-		player.sendSystemMessage(link);
+		CardPackOffers.sendManualGuide(player);
 		return 1;
 	}
 

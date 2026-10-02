@@ -28,12 +28,15 @@ public final class MinecardConfig {
 	public static long defaultBet = 10L;
 	public static long startingBalance = 128L;
 	/**
-	 * Hostname/IP for local HTTP pack server. Empty → {@code server-ip} / auto-detect / 127.0.0.1.
-	 * Remote clients need HTTPS — prefer {@link #packUrl} or leave both empty to use GitHub Release.
+	 * Hostname/IP for the pack HTTP server URL. Empty → {@code server-ip} / auto-detect / 127.0.0.1.
+	 * Open this port on the VPS firewall so players can download the zip in a browser.
 	 */
 	public static String packHost = "";
 	public static int packPort = 8765;
-	/** Full pack URL override (use HTTPS for VPS). Empty → auto GitHub release when host is remote. */
+	/**
+	 * Optional public HTTPS URL for in-game Accept prompt. Leave empty on a private GitHub repo —
+	 * the VPS will serve HTTP for browser/manual install instead (vanilla blocks remote HTTP pushes).
+	 */
 	public static String packUrl = "";
 
 	private MinecardConfig() {

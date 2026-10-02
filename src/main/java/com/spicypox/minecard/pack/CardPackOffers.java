@@ -4,8 +4,12 @@ import com.spicypox.minecard.Minecard;
 import com.spicypox.minecard.config.MinecardConfig;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,15 +17,29 @@ import net.minecraft.server.level.ServerPlayer;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Card resource pack delivery.
+ * <p>
+ * Vanilla clients reject plain HTTP packs from remote hosts, and private GitHub
+ * releases are not downloadable by players. For a private repo + VPS we:
+ * <ul>
+ *   <li>Serve the zip on the VPS HTTP port for <b>browser</b> download</li>
+ *   <li>Only auto-push (in-game Accept prompt) when the URL is HTTPS or localhost</li>
+ *   <li>Otherwise send a chat link + manual Resource Packs instructions</li>
+ * </ul>
+ */
 public final class CardPackOffers {
 	private static CardResourcePack pack;
 	private static PackHttpServer http;
+	/** URL advertised to players (browser and/or in-game push). */
 	private static String packUrl;
+	private static boolean autoPush;
 
 	private CardPackOffers() {
 	}
@@ -32,13 +50,14 @@ public final class CardPackOffers {
 				pack = CardResourcePack.build();
 				http = startHttp(pack);
 				packUrl = resolvePackUrl(server, http.port());
-				Minecard.LOGGER.info("Card pack URL for clients: {}", packUrl);
-				if (packUrl.startsWith("http://") && !isLoopbackHost(hostFromUrl(packUrl))) {
+				autoPush = canAutoPush(packUrl);
+				Minecard.LOGGER.info("Card pack URL for clients: {} (autoPush={})", packUrl, autoPush);
+				if (!autoPush) {
 					Minecard.LOGGER.warn(
-						"Pack URL is plain HTTP to a remote host. Vanilla clients usually reject this. "
-							+ "Set packUrl in config/minecard.json to an HTTPS URL "
-							+ "(GitHub Release asset minecard-cards.zip), or leave packUrl empty "
-							+ "to auto-use the GitHub release for this mod version."
+						"In-game pack Accept is disabled for this URL (vanilla blocks cleartext HTTP to "
+							+ "public IPs; private GitHub releases are not reachable). Players use the chat "
+							+ "download link (browser) then enable the pack in Options → Resource Packs. "
+							+ "Or set packUrl in config/minecard.json to a public HTTPS URL you host."
 					);
 				}
 			} catch (Exception e) {
@@ -51,12 +70,12 @@ public final class CardPackOffers {
 				http = null;
 			}
 		});
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> offer(handler.player));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> offerOrGuide(handler.player));
 	}
 
 	/**
-	 * Priority: config {@code packUrl} → GitHub release HTTPS (when host is remote) →
-	 * {@code http://packHost|server-ip|detected:port/minecard-cards.zip}.
+	 * Config {@code packUrl} if set; else {@code http://&lt;server-ip|packHost|detected&gt;:port/minecard-cards.zip}.
+	 * Does <b>not</b> auto-use private GitHub releases.
 	 */
 	static String resolvePackUrl(MinecraftServer server, int port) {
 		String configured = MinecardConfig.packUrl;
@@ -64,22 +83,11 @@ public final class CardPackOffers {
 			return configured.trim();
 		}
 		String host = resolveHost(server);
-		if (!isLoopbackHost(host)) {
-			String gh = githubReleasePackUrl();
-			if (gh != null) {
-				Minecard.LOGGER.info(
-					"packUrl empty and host {} is remote — using HTTPS GitHub pack (vanilla blocks cleartext HTTP).",
-					host
-				);
-				return gh;
-			}
-		}
 		return "http://" + host + ":" + port + "/minecard-cards.zip";
 	}
 
 	/**
-	 * Config packHost → -Dminecard.packHost → server-ip ({@link MinecraftServer#getLocalIp()}) →
-	 * first non-loopback IPv4 → 127.0.0.1.
+	 * Config packHost → -Dminecard.packHost → server-ip → first non-loopback IPv4 → 127.0.0.1.
 	 */
 	public static String resolveHost(MinecraftServer server) {
 		String fromConfig = MinecardConfig.packHost;
@@ -101,7 +109,6 @@ public final class CardPackOffers {
 		return detectNonLoopbackIpv4().orElse("127.0.0.1");
 	}
 
-	/** @deprecated use {@link #resolveHost(MinecraftServer)} */
 	public static String resolveHost() {
 		return resolveHost(null);
 	}
@@ -149,28 +156,32 @@ public final class CardPackOffers {
 		return Optional.empty();
 	}
 
-	/** HTTPS GitHub asset for this mod version, or null if unknown. */
-	public static String githubReleasePackUrl() {
-		try {
-			String ver = FabricLoader.getInstance()
-				.getModContainer(Minecard.MOD_ID)
-				.map(c -> c.getMetadata().getVersion().getFriendlyString())
-				.orElse(null);
-			if (ver == null || ver.isBlank()) {
-				return null;
-			}
-			return "https://github.com/SpicyPox/minecard/releases/download/v" + ver + "/minecard-cards.zip";
-		} catch (Exception e) {
-			return null;
+	/** True when vanilla will accept an in-game ResourcePackPush for this URL. */
+	static boolean canAutoPush(String url) {
+		if (url == null || url.isBlank()) {
+			return false;
 		}
+		try {
+			URI uri = URI.create(url);
+			String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase() : "";
+			if ("https".equals(scheme)) {
+				return true;
+			}
+			if ("http".equals(scheme)) {
+				return isLoopbackHost(uri.getHost());
+			}
+		} catch (Exception ignored) {
+		}
+		return false;
 	}
 
-	/** Best URL to share for manual install (live offer URL, else GitHub release). */
+	public static boolean autoPushEnabled() {
+		return autoPush && pack != null && packUrl != null;
+	}
+
+	/** Browser / chat download URL (VPS HTTP is fine in a normal browser). */
 	public static String manualDownloadUrl() {
-		if (packUrl != null && !packUrl.isBlank()) {
-			return packUrl;
-		}
-		return githubReleasePackUrl();
+		return packUrl;
 	}
 
 	static boolean isLoopbackHost(String host) {
@@ -179,14 +190,6 @@ public final class CardPackOffers {
 		}
 		String h = host.trim().toLowerCase();
 		return "127.0.0.1".equals(h) || "localhost".equals(h) || "::1".equals(h);
-	}
-
-	private static String hostFromUrl(String url) {
-		try {
-			return java.net.URI.create(url).getHost();
-		} catch (Exception e) {
-			return "";
-		}
 	}
 
 	private static PackHttpServer startHttp(CardResourcePack pack) throws Exception {
@@ -202,20 +205,31 @@ public final class CardPackOffers {
 		throw last != null ? last : new IllegalStateException("no pack port available");
 	}
 
-	/** URL clients use to download the zip, or null if hosting failed. */
 	public static String packUrl() {
 		return packUrl;
 	}
 
 	/**
-	 * Re-offer (or first-offer) the optional card resource pack.
-	 * @return true if the push packet was sent
+	 * In-game Accept prompt when allowed; otherwise chat link for manual install.
+	 * @return true if something useful was sent
 	 */
-	public static boolean offer(ServerPlayer player) {
+	public static boolean offerOrGuide(ServerPlayer player) {
 		if (pack == null || packUrl == null) {
 			return false;
 		}
-		// Optional: never force-kick if the player declines the pack.
+		if (autoPush) {
+			return pushPack(player);
+		}
+		sendManualGuide(player);
+		return true;
+	}
+
+	/** @deprecated prefer {@link #offerOrGuide(ServerPlayer)} */
+	public static boolean offer(ServerPlayer player) {
+		return offerOrGuide(player);
+	}
+
+	private static boolean pushPack(ServerPlayer player) {
 		player.connection.send(new ClientboundResourcePackPushPacket(
 			pack.id(),
 			packUrl,
@@ -224,5 +238,17 @@ public final class CardPackOffers {
 			Optional.of(Component.translatable("minecard.pack.prompt"))
 		));
 		return true;
+	}
+
+	public static void sendManualGuide(ServerPlayer player) {
+		player.sendSystemMessage(Component.translatable("minecard.pack.manual_hint"));
+		MutableComponent link = Component.translatable("minecard.pack.manual_click")
+			.withStyle(Style.EMPTY
+				.withColor(ChatFormatting.GREEN)
+				.withUnderlined(true)
+				.withClickEvent(new ClickEvent.OpenUrl(URI.create(packUrl)))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(packUrl))));
+		player.sendSystemMessage(link);
+		player.sendSystemMessage(Component.translatable("minecard.pack.manual_firewall", String.valueOf(http != null ? http.port() : resolvePort())));
 	}
 }
