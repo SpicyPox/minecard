@@ -3,6 +3,7 @@ package com.spicypox.minecard.dialog;
 import com.spicypox.minecard.Minecard;
 import com.spicypox.minecard.game.blackjack.BlackjackGames;
 import com.spicypox.minecard.room.CreateRoomDialog;
+import com.spicypox.minecard.room.PokerRooms;
 import com.spicypox.minecard.room.RoomListDialog;
 import com.spicypox.minecard.room.Rooms;
 import com.spicypox.minecard.ui.BalanceMenuDialog;
@@ -92,6 +93,22 @@ public final class DialogClicks {
 		}
 		if (path.startsWith("table/")) {
 			Rooms.onTableClick(player, path.substring("table/".length()));
+			return true;
+		}
+		if (path.startsWith("poker/")) {
+			String action = path.substring("poker/".length());
+			switch (action) {
+				case "ready" -> PokerRooms.setReady(player, true);
+				case "unready" -> PokerRooms.setReady(player, false);
+				case "start" -> PokerRooms.hostStart(player);
+				case "leave" -> PokerRooms.leave(player);
+				default -> {
+				}
+			}
+			return true;
+		}
+		if (path.startsWith("table_poker/")) {
+			PokerRooms.onTableClick(player, path.substring("table_poker/".length()), nbt);
 			return true;
 		}
 		return false;

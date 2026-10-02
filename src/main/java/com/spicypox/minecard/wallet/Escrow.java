@@ -78,4 +78,40 @@ public final class Escrow {
 			wallet.add(playerId, itemId, amount);
 		}
 	}
+
+	/**
+	 * Ensure wallet balance ≥ need: use existing balance first, then move plain items
+	 * from inventory into the wallet. Refuses (and takes nothing) if still short.
+	 */
+	public static boolean ensureWalletCoverage(
+		Wallet wallet,
+		ItemSource items,
+		UUID playerId,
+		Identifier itemId,
+		long need
+	) {
+		if (need <= 0L) {
+			return true;
+		}
+		long bal = wallet.balance(playerId, itemId);
+		if (bal >= need) {
+			return true;
+		}
+		long shortfall = need - bal;
+		if (items.count(itemId) < shortfall) {
+			return false;
+		}
+		long taken = items.take(itemId, shortfall);
+		if (taken != shortfall) {
+			if (taken > 0L) {
+				long leftover = items.give(itemId, taken);
+				if (leftover > 0L) {
+					wallet.add(playerId, itemId, leftover);
+				}
+			}
+			return false;
+		}
+		wallet.add(playerId, itemId, taken);
+		return wallet.balance(playerId, itemId) >= need;
+	}
 }

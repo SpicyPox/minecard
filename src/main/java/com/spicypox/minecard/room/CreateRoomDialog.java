@@ -3,6 +3,7 @@ package com.spicypox.minecard.room;
 import com.spicypox.minecard.Minecard;
 import com.spicypox.minecard.config.MinecardConfig;
 import com.spicypox.minecard.game.blackjack.StakeItem;
+import com.spicypox.minecard.game.poker.PokerRules;
 import com.spicypox.minecard.ui.CardLayer;
 import com.spicypox.minecard.ui.DialogUi;
 import com.spicypox.minecard.ui.Dialogs;
@@ -41,10 +42,11 @@ public final class CreateRoomDialog {
 	public static final Identifier GAME_POKER = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/game_poker");
 	public static final Identifier SETTINGS_NEXT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/settings_next");
 	public static final Identifier SETTINGS_BACK = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/settings_back");
+	public static final Identifier POKER_SETTINGS_NEXT = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/poker_settings_next");
+	public static final Identifier POKER_SETTINGS_BACK = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/poker_settings_back");
 	public static final Identifier STAKE_CREATE = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/stake_create");
 	public static final Identifier STAKE_BACK = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/stake_back");
 	public static final Identifier CANCEL = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/cancel");
-	public static final Identifier POKER_BACK = Identifier.fromNamespaceAndPath(Minecard.MOD_ID, "create/poker_back");
 
 	private CreateRoomDialog() {
 	}
@@ -65,8 +67,10 @@ public final class CreateRoomDialog {
 		player.openDialog(Holder.direct(buildStake(player, draft)));
 	}
 
-	public static void openPokerSoon(ServerPlayer player) {
-		player.openDialog(Holder.direct(buildPokerSoon()));
+	public static void openPokerSettings(ServerPlayer player) {
+		CreateRoomDraft draft = CreateRoomDraft.getOrCreate(player.getUUID());
+		draft.setGame(CreateRoomDraft.Game.POKER);
+		player.openDialog(Holder.direct(buildPokerSettings(draft)));
 	}
 
 	public static boolean onClick(ServerPlayer player, String action, CompoundTag payload) {
@@ -76,10 +80,10 @@ public final class CreateRoomDialog {
 				yield true;
 			}
 			case "game_poker" -> {
-				openPokerSoon(player);
+				openPokerSettings(player);
 				yield true;
 			}
-			case "poker_back", "settings_back" -> {
+			case "poker_settings_back", "settings_back" -> {
 				openGameSelect(player);
 				yield true;
 			}
@@ -88,8 +92,18 @@ public final class CreateRoomDialog {
 				openStake(player);
 				yield true;
 			}
+			case "poker_settings_next" -> {
+				applyPokerSettings(CreateRoomDraft.getOrCreate(player.getUUID()), payload);
+				openStake(player);
+				yield true;
+			}
 			case "stake_back" -> {
-				openBjSettings(player);
+				CreateRoomDraft draft = CreateRoomDraft.getOrCreate(player.getUUID());
+				if (draft.game() == CreateRoomDraft.Game.POKER) {
+					openPokerSettings(player);
+				} else {
+					openBjSettings(player);
+				}
 				yield true;
 			}
 			case "stake_create" -> {
@@ -123,13 +137,64 @@ public final class CreateRoomDialog {
 		return dialog("minecard.create.game.title", body, List.of(), actions, cancel(w));
 	}
 
-	private static MultiActionDialog buildPokerSoon() {
+	private static MultiActionDialog buildPokerSettings(CreateRoomDraft draft) {
+		PokerRules r = draft.pokerRules();
 		int w = DialogUi.BUTTON_WIDTH;
 		List<DialogBody> body = List.of(
-			new PlainMessage(Component.translatable("minecard.create.poker.soon"), CardLayer.DIALOG_WIDTH)
+			new PlainMessage(Component.translatable("minecard.create.poker.settings.hint"), CardLayer.DIALOG_WIDTH)
 		);
-		List<ActionButton> actions = List.of(button("minecard.create.back", POKER_BACK, w));
-		return dialog("minecard.create.game.poker", body, List.of(), actions, cancel(w));
+		List<Input> inputs = List.of(
+			new Input(
+				"small_blind",
+				new NumberRangeInput(
+					w,
+					Component.translatable("minecard.create.poker.sb"),
+					"options.generic_value",
+					new NumberRangeInput.RangeInfo(1f, 100f, Optional.of((float) r.smallBlind()), Optional.of(1f))
+				)
+			),
+			new Input(
+				"big_blind",
+				new NumberRangeInput(
+					w,
+					Component.translatable("minecard.create.poker.bb"),
+					"options.generic_value",
+					new NumberRangeInput.RangeInfo(2f, 200f, Optional.of((float) r.bigBlind()), Optional.of(1f))
+				)
+			),
+			new Input(
+				"min_buy_in",
+				new NumberRangeInput(
+					w,
+					Component.translatable("minecard.create.poker.min_buy"),
+					"options.generic_value",
+					new NumberRangeInput.RangeInfo(10f, 10000f, Optional.of((float) r.minBuyIn()), Optional.of(1f))
+				)
+			),
+			new Input(
+				"max_buy_in",
+				new NumberRangeInput(
+					w,
+					Component.translatable("minecard.create.poker.max_buy"),
+					"options.generic_value",
+					new NumberRangeInput.RangeInfo(10f, 10000f, Optional.of((float) r.maxBuyIn()), Optional.of(1f))
+				)
+			),
+			new Input(
+				"max_players",
+				new NumberRangeInput(
+					w,
+					Component.translatable("minecard.create.settings.seats"),
+					"options.generic_value",
+					new NumberRangeInput.RangeInfo(2f, 4f, Optional.of((float) r.maxPlayers()), Optional.of(1f))
+				)
+			)
+		);
+		List<ActionButton> actions = List.of(
+			button("minecard.create.next", POKER_SETTINGS_NEXT, w),
+			button("minecard.create.back", POKER_SETTINGS_BACK, w)
+		);
+		return dialog("minecard.create.poker.settings.title", body, inputs, actions, cancel(w));
 	}
 
 	private static MultiActionDialog buildBjSettings(CreateRoomDraft draft) {
@@ -211,9 +276,20 @@ public final class CreateRoomDialog {
 				true
 			));
 		}
-		long initialBet = draft.betAmount() > 0 ? draft.betAmount() : Math.max(1L, MinecardConfig.defaultBet);
+		long initialBet;
+		if (draft.game() == CreateRoomDraft.Game.POKER) {
+			PokerRules pr = draft.pokerRules();
+			initialBet = draft.betAmount() >= pr.minBuyIn() && draft.betAmount() <= pr.maxBuyIn()
+				? draft.betAmount()
+				: pr.minBuyIn();
+		} else {
+			initialBet = draft.betAmount() > 0 ? draft.betAmount() : Math.max(1L, MinecardConfig.defaultBet);
+		}
+		String hintKey = draft.game() == CreateRoomDraft.Game.POKER
+			? "minecard.create.poker.stake.hint"
+			: "minecard.create.stake.hint";
 		List<DialogBody> body = List.of(
-			new PlainMessage(Component.translatable("minecard.create.stake.hint"), CardLayer.DIALOG_WIDTH),
+			new PlainMessage(Component.translatable(hintKey), CardLayer.DIALOG_WIDTH),
 			new PlainMessage(Component.translatable("minecard.create.stake.check_order"), CardLayer.DIALOG_WIDTH)
 		);
 		// Item = SingleOptionInput (vanilla dropdown/cycle). Amount = TextInput (typed number).
@@ -310,6 +386,18 @@ public final class CreateRoomDialog {
 		draft.setRules(new BjRoomRules(turn, decks, insurance, soft17, surrender, seats));
 	}
 
+	private static void applyPokerSettings(CreateRoomDraft draft, CompoundTag payload) {
+		PokerRules cur = draft.pokerRules();
+		long sb = Math.round(payload.getFloatOr("small_blind", cur.smallBlind()));
+		long bb = Math.round(payload.getFloatOr("big_blind", cur.bigBlind()));
+		long min = Math.round(payload.getFloatOr("min_buy_in", cur.minBuyIn()));
+		long max = Math.round(payload.getFloatOr("max_buy_in", cur.maxBuyIn()));
+		int seats = Math.round(payload.getFloatOr("max_players", cur.maxPlayers()));
+		draft.setPokerRules(new PokerRules(sb, bb, min, max, seats));
+		draft.setGame(CreateRoomDraft.Game.POKER);
+		draft.setBetAmount(draft.pokerRules().minBuyIn());
+	}
+
 	/** @return false if amount text is invalid */
 	private static boolean applyStake(ServerPlayer player, CreateRoomDraft draft, CompoundTag payload) {
 		String betText = payload.getStringOr("bet", Long.toString(draft.betAmount())).trim();
@@ -320,7 +408,17 @@ public final class CreateRoomDialog {
 			player.sendSystemMessage(Component.translatable("minecard.create.stake.amount_invalid"));
 			return false;
 		}
-		if (bet < 1L || bet > 1_000_000L) {
+		if (draft.game() == CreateRoomDraft.Game.POKER) {
+			PokerRules pr = draft.pokerRules();
+			if (bet < pr.minBuyIn() || bet > pr.maxBuyIn()) {
+				player.sendSystemMessage(Component.translatable(
+					"minecard.create.poker.buy_in_invalid",
+					pr.minBuyIn(),
+					pr.maxBuyIn()
+				));
+				return false;
+			}
+		} else if (bet < 1L || bet > 1_000_000L) {
 			player.sendSystemMessage(Component.translatable("minecard.create.stake.amount_invalid"));
 			return false;
 		}

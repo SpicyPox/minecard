@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EscrowTest {
@@ -53,6 +54,24 @@ class EscrowTest {
 		Escrow.release(wallet, items, hold);
 		assertEquals(5L, wallet.balance(player, DIAMOND));
 		assertEquals(5L, items.count(DIAMOND));
+	}
+
+	@Test
+	void ensureWalletCoverageMovesInventoryWhenBalanceShort() {
+		wallet.setBalance(player, DIAMOND, 0L);
+		FakeItems items = new FakeItems(25L);
+		assertTrue(Escrow.ensureWalletCoverage(wallet, items, player, DIAMOND, 20L));
+		assertEquals(20L, wallet.balance(player, DIAMOND));
+		assertEquals(5L, items.count(DIAMOND));
+	}
+
+	@Test
+	void ensureWalletCoverageRefusesWhenInventoryShort() {
+		wallet.setBalance(player, DIAMOND, 2L);
+		FakeItems items = new FakeItems(3L);
+		assertFalse(Escrow.ensureWalletCoverage(wallet, items, player, DIAMOND, 10L));
+		assertEquals(2L, wallet.balance(player, DIAMOND));
+		assertEquals(3L, items.count(DIAMOND));
 	}
 
 	/** Simple countable bag for tests (no Minecraft player). */

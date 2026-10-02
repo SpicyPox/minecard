@@ -1,6 +1,7 @@
 package com.spicypox.minecard.room;
 
 import com.spicypox.minecard.config.MinecardConfig;
+import com.spicypox.minecard.game.poker.PokerRules;
 import net.minecraft.resources.Identifier;
 
 import java.util.Map;
@@ -18,6 +19,7 @@ public final class CreateRoomDraft {
 
 	private Game game = Game.BLACKJACK;
 	private BjRoomRules rules = BjRoomRules.defaults();
+	private PokerRules pokerRules = PokerRules.defaults();
 	private long betAmount = Math.max(1L, MinecardConfig.defaultBet);
 	private Identifier stakeItem = Identifier.withDefaultNamespace("oak_log");
 
@@ -46,6 +48,14 @@ public final class CreateRoomDraft {
 
 	public void setRules(BjRoomRules rules) {
 		this.rules = rules.sanitized();
+	}
+
+	public PokerRules pokerRules() {
+		return pokerRules;
+	}
+
+	public void setPokerRules(PokerRules pokerRules) {
+		this.pokerRules = pokerRules != null ? pokerRules.sanitized() : PokerRules.defaults();
 	}
 
 	public long betAmount() {

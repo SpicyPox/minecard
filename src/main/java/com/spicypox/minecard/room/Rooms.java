@@ -128,6 +128,10 @@ public final class Rooms {
 	}
 
 	private static void onDisconnect(ServerPlayer player, MinecraftServer server) {
+		if (PokerRooms.roomOf(player.getUUID()).isPresent()) {
+			PokerRooms.onDisconnect(player, server);
+			return;
+		}
 		roomOf(player.getUUID()).ifPresent(room -> {
 			if (room.hostId().equals(player.getUUID())) {
 				// Host grace: close room and refund seats (ke-hoach: host offline mid-lobby/hand).
@@ -156,10 +160,18 @@ public final class Rooms {
 	}
 
 	public static void createFromDraft(ServerPlayer host, CreateRoomDraft draft) {
-		if (PLAYER_ROOM.containsKey(host.getUUID())) {
+		if (occupied(host.getUUID())) {
 			host.sendSystemMessage(Component.translatable("minecard.room.already_in"));
 			CreateRoomDraft.clear(host.getUUID());
-			openLobby(host);
+			if (PokerRooms.roomOf(host.getUUID()).isPresent()) {
+				PokerRooms.openLobby(host);
+			} else {
+				openLobby(host);
+			}
+			return;
+		}
+		if (draft.game() == CreateRoomDraft.Game.POKER) {
+			PokerRooms.createFromDraft(host, draft);
 			return;
 		}
 		if (draft.game() != CreateRoomDraft.Game.BLACKJACK) {
@@ -255,13 +267,22 @@ public final class Rooms {
 		return Optional.ofNullable(BY_ID.get(id));
 	}
 
+	/** Shared occupancy with poker rooms. */
+	public static boolean occupied(UUID playerId) {
+		return PLAYER_ROOM.containsKey(playerId) || PokerRooms.occupied(playerId);
+	}
+
 	public static void join(ServerPlayer player, String roomId) {
+		if (PokerRooms.get(roomId).isPresent()) {
+			PokerRooms.join(player, roomId);
+			return;
+		}
 		BjRoom room = BY_ID.get(roomId);
 		if (room == null || !room.canJoin()) {
 			player.sendSystemMessage(Component.translatable("minecard.room.join_fail"));
 			return;
 		}
-		if (PLAYER_ROOM.containsKey(player.getUUID())) {
+		if (occupied(player.getUUID())) {
 			player.sendSystemMessage(Component.translatable("minecard.room.already_in"));
 			return;
 		}
@@ -284,6 +305,10 @@ public final class Rooms {
 	}
 
 	public static void leave(ServerPlayer player) {
+		if (PokerRooms.roomOf(player.getUUID()).isPresent()) {
+			PokerRooms.leave(player);
+			return;
+		}
 		String id = PLAYER_ROOM.remove(player.getUUID());
 		if (id == null) {
 			MainMenuDialog.open(player);
@@ -395,7 +420,14 @@ public final class Rooms {
 			return;
 		}
 		long liability = room.maxHouseLiability();
-		if (Wallets.balance(host.getUUID(), room.stakeItem()) < liability) {
+		// Balance first, then inventory (túi) — same order as player bets / ke-hoach.
+		if (!Escrow.ensureWalletCoverage(
+			Wallets.get(),
+			new PlayerItemSource(host),
+			host.getUUID(),
+			room.stakeItem(),
+			liability
+		)) {
 			host.sendSystemMessage(Component.translatable("minecard.room.host_broke", liability));
 			return;
 		}
@@ -514,6 +546,9 @@ public final class Rooms {
 
 	/** Admin: force-close the room a player is in (refund escrow). */
 	public static boolean adminEnd(ServerPlayer target) {
+		if (PokerRooms.adminEnd(target)) {
+			return true;
+		}
 		return roomOf(target.getUUID()).map(room -> {
 			closeRoom(room, target.level().getServer(), "minecard.room.admin_end");
 			return true;

@@ -149,19 +149,17 @@ Bộ bài trên GUI là bài Tây đủ hình, không thay bằng tên vật ph�
 Dialog (không cần mod client):
 
 - Chính: hint/stats → ô mã phòng → Số dư / Vào / Tạo phòng / Tải pack (1 cột); tạm ẩn hồ sơ. Nạp/Rút/Xem số dư trong menu Số dư; xem chỉ đọc + phân trang. Dialog `pause=false` + `after_action=none`.
-- Tạo phòng (wizard): chọn Blackjack/Poker (Poker báo chưa mở); trang luật BJ (timer, decks, seats, insurance, soft-17, surrender — default từ config); trang cược (số lượng + chọn item từ balance/tay); đủ đồ thì tạo và chat mã + join.
-- Trong ván: từng lá hiện hình đúng quân, điểm, nút Hit / Stand / Double / Split / Insurance / Surrender đúng lúc luật cho phép, thời gian còn lại.
+- Tạo phòng (wizard): chọn Blackjack/Poker; BJ = luật timer/decks/…; Poker = SB/BB/min–max buy-in/seats; trang cược/buy-in (số lượng + item từ balance/tay); đủ đồ thì tạo và chat mã + join.
+- Trong ván BJ: glyph, điểm, Hit/Stand/Double/Split/Insurance đúng lúc. Poker NLHE: board trên cùng, hole riêng, status bet/call/fold/all-in, nút 2 cột + nhập raise tùy ý.
 - Hồ sơ: thắng, thua, hòa, lãi ròng **từng loại vật phẩm** (chỉ thống kê, không đổi vật phẩm).
 
 Ràng buộc thêm: chống spam phòng, hết hạn sảnh nếu không bắt đầu, hoàn cả bàn nếu chủ phòng mất kết nối quá ân hạn giữa ván, `/minecard admin end|refund` cho quyền admin. Nhật ký giao dịch ngắn để đối soát, gồm nguồn trừ (balance hay túi) và lý do hoàn.
 
 `config/minecard.json`: thời gian lượt, ân hạn mất kết nối, thời gian sảnh, số phòng tối đa, chặn creative. Ngôn ngữ đi theo client qua Server Translations API (`vi_vn`, `en_us`), không có nút đổi ngôn ngữ riêng trong hồ sơ.
 
-## Khung cho Poker và Liar’s Bar
+## Poker (MVP) và Liar’s Bar
 
-`GameSession` nhận action dạng id + NBT và tick của server. Blackjack là ván đầu tiên, sau khi mốc 52 quân đã hiện trên GUI. Wizard tạo phòng hiện Blackjack và Poker (Poker báo chưa mở). Chưa code ván Poker hay Liar’s Bar trong đợt này. Hai game sau cắm vào cùng ví, phòng, timer và dialog:
-
-- Poker: Texas Hold’em, blind bằng đúng vật phẩm phòng, fold/check/call/raise, side pot.
-- Liar’s Bar: bluff, mỗi người chỉ thấy bài/xúc xắc của mình trong dialog riêng, người thua trả đúng vật phẩm phòng.
+- **Poker NLHE (đã mở slice 1):** `PokerRoom` / `PokerRooms` / `TablePoker` — server chia bài, pot giữa players (không nhà cái), host cũng ngồi chơi. Blind + buy-in bằng đúng item phòng. Fold/check/call/raise (custom + preset)/all-in. Dialog 2 cột, hole private, board/flop trên HUD. Một pot chính (chưa multi side-pot). Timer mặc định 0. Leave/disconnect giữa ván = fold + cash-out stack; đóng phòng/admin end giữa ván = `abortHand` hoàn chip trong pot về stack rồi mới cash-out. Ghế 0 chip bị fold out khi deal (không kẹt vòng cược).
+- **Liar’s Bar:** chưa làm — bluff, mỗi người chỉ thấy bài của mình, người thua trả đúng vật phẩm phòng.
 
 Cách kiểm tra từng mốc nằm ở [implement.md](implement.md).

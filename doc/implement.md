@@ -11,7 +11,7 @@ Làm đúng một mốc rồi mới sang mốc sau. Mốc 1 chặn mọi thứ k
 3. **Phòng.** Wizard tạo phòng (game → luật BJ → cược), chat mã + `[Vào bàn]`, menu nhập mã, sảnh Ready, host Start — `Rooms` / `BjRoom`. **Đang hoạt động (MVP).**
 4. **Blackjack.** Chơi multiplayer qua phòng (`TableBlackjack`); menu không còn solo. Hit/stand/double/split/insurance, timer, 3:2, glyph, shoe/config. Nhà cái (host) bấm Hit/Stand theo luật. Hết ván ở lại bàn: Play again → Confirm → host Deal. Bank qua sgui: nạp = staging → Confirm; rút nhiều item. Mid-hand không resume — hoàn escrow, giữ sảnh (`RoomSavedData`). Pack: `packHost`/`packPort` trong config; `/minecard pack` gửi lại lời mời.
 5. **LuckPerms, hồ sơ, lệnh admin.** `/minecard admin stats|ledger|end` (OP); dialog Hồ sơ + Bank. **Đang hoạt động (MVP).**
-6. **Poker và Liar’s Bar.** Chưa làm trong các mốc trên.
+6. **Poker NLHE (slice 1 đang làm / đã có lõi).** `PokerHandEval`, `TablePoker`, `PokerRoom`/`PokerRooms`, wizard tạo phòng Poker, `TablePokerDialog` (2 cột + raise input). Chưa: side pot đầy đủ, persist mid-hand, Liar’s Bar.
 
 Khi bắt đầu code, ghi mục «Ràng buộc cho Cursor» bên dưới vào [`.cursor/rules/minecard.mdc`](../.cursor/rules/minecard.mdc) với `alwaysApply: true`, rồi mới viết mốc 1.
 
